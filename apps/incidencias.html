@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<title>Seguimiento_Q4_v3_FINAL.xlsx</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Hoja de seguimiento de proyecto Q4 / Q4 project tracking sheet.">
+<meta property="og:title" content="Seguimiento_Q4_v3_FINAL.xlsx">
+<meta property="og:description" content="Hoja de seguimiento de proyecto Q4 / Q4 project tracking sheet.">
+<meta property="og:url" content="https://corporativo.recursosvidafacil.com/apps/incidencias.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='1' width='14' height='14' rx='2' fill='%23466b8c'/%3E%3Cpath d='M1 6h14M1 10h14M6 1v14M10 6v9' stroke='%23fff' stroke-width='1'/%3E%3C/svg%3E">
+<style>
+  /* ===== Tokens: paleta de herramienta de oficina genérica (tema claro único, como una hoja real) ===== */
+  :root {
+    --chrome: #f3f4f6;        /* barras superiores */
+    --chrome-2: #e8eaee;      /* cabeceras de fila/columna */
+    --chrome-line: #d5d8de;
+    --grid-line: #e1e3e7;     /* borde fino de celda */
+    --ink: #1f2328;
+    --ink-2: #5a6270;
+    --ink-3: #8a919c;
+    --accent: #466b8c;        /* azul pizarra apagado, sin marca */
+    --accent-soft: #e3ebf2;
+    --sel: #3f6f98;           /* borde de selección */
+    --cell: #ffffff;
+    --cell-open: #f1f2f4;     /* celda revelada vacía */
+    --flag: #c93a2f;
+    --ref: #b3261e;
+    --ref-bg: #fbe1de;
+    --font: Calibri, "Segoe UI", Arial, sans-serif;
+    --colw: 48px;
+    --rowh: 22px;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--cell);
+    color: var(--ink);
+    font: 13px/1.2 var(--font);
+    overflow: hidden;               /* la página no hace scroll: lo hace la hoja */
+  }
+  .app { display: flex; flex-direction: column; height: 100%; min-width: 0; }
+
+  /* ===== Barra de título ===== */
+  .titlebar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 12px; background: var(--accent); color: #fff;
+    white-space: nowrap; overflow: hidden;
+  }
+  /* Lanzador de aplicaciones: vuelve al portal */
+  .launcher { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 3px; color: #fff; flex: none; }
+  .launcher:hover { background: rgba(255,255,255,.15); }
+  .launcher:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+  .launcher svg { width: 14px; height: 14px; fill: currentColor; }
+  .titlebar .doc { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+  .titlebar .saved { opacity: .8; font-size: 12px; }
+  .titlebar .spacer { flex: 1; }
+  .titlebar .user {
+    width: 22px; height: 22px; border-radius: 50%; background: #dfe7ee; color: var(--accent);
+    display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: none;
+  }
+
+  /* ===== Menús ===== */
+  .menubar { display: flex; gap: 2px; padding: 2px 8px; background: var(--chrome); overflow: hidden; white-space: nowrap; }
+  .menubar span { padding: 3px 8px; border-radius: 3px; cursor: default; }
+  .menubar span:hover { background: var(--chrome-2); }
+
+  /* ===== Barra de herramientas ===== */
+  .toolbar {
+    display: flex; align-items: center; gap: 2px; padding: 4px 8px;
+    background: var(--chrome); border-bottom: 1px solid var(--chrome-line);
+    overflow-x: auto; scrollbar-width: none; white-space: nowrap;
+  }
+  .toolbar::-webkit-scrollbar { display: none; }
+  .tb {
+    flex: none; height: 26px; min-width: 26px; padding: 0 5px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    border: 1px solid transparent; border-radius: 3px; background: transparent;
+    color: var(--ink); font: inherit; cursor: pointer;
+  }
+  .tb:hover { background: var(--chrome-2); border-color: var(--chrome-line); }
+  .tb:focus-visible { outline: 2px solid var(--sel); outline-offset: 1px; }
+  .tb svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+  .tb.txt b, .tb.txt i, .tb.txt u { font-family: Georgia, serif; font-size: 14px; }
+  .sep { flex: none; width: 1px; height: 18px; background: var(--chrome-line); margin: 0 4px; }
+  .combo {
+    flex: none; height: 24px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: space-between;
+    border: 1px solid var(--chrome-line); background: #fff; border-radius: 2px; color: var(--ink-2);
+  }
+  .combo::after { content: "▾"; margin-left: 8px; font-size: 10px; color: var(--ink-3); }
+  #btnRecalc { border-color: var(--chrome-line); background: #fff; }
+  #btnRecalc:hover { background: var(--accent-soft); }
+
+  /* ===== Barra de fórmulas ===== */
+  .formulabar { display: flex; align-items: stretch; border-bottom: 1px solid var(--chrome-line); background: #fff; min-width: 0; }
+  #nameBox {
+    width: 84px; flex: none; border: 0; border-right: 1px solid var(--chrome-line);
+    padding: 4px 8px; font: inherit; color: var(--ink); background: #fff;
+  }
+  .fx {
+    flex: none; width: 34px; display: grid; place-items: center; color: var(--ink-3);
+    font-style: italic; font-family: Georgia, serif; border-right: 1px solid var(--chrome-line);
+  }
+  #formula { flex: 1; min-width: 0; border: 0; padding: 4px 8px; font: inherit; color: var(--ink); background: #fff; }
+  #nameBox:focus, #formula:focus { outline: none; }
+
+  /* ===== Área de hoja (scroll interno) ===== */
+  .sheetwrap { flex: 1; min-height: 0; position: relative; overflow: auto; background: #fff; }
+  .sheetwrap:focus { outline: none; }
+  table.sheet {
+    border-collapse: separate; border-spacing: 0; table-layout: fixed;
+    font-variant-numeric: tabular-nums; user-select: none; -webkit-user-select: none;
+  }
+  .sheet th, .sheet td {
+    height: var(--rowh); padding: 0 4px; border-right: 1px solid var(--grid-line);
+    border-bottom: 1px solid var(--grid-line); white-space: nowrap; overflow: hidden;
+  }
+  .sheet thead th {
+    position: sticky; top: 0; z-index: 3; background: var(--chrome-2); color: var(--ink-2);
+    font-weight: 400; text-align: center; border-color: var(--chrome-line);
+  }
+  .sheet tbody th {
+    position: sticky; left: 0; z-index: 2; background: var(--chrome-2); color: var(--ink-2);
+    font-weight: 400; text-align: center; width: 40px; border-color: var(--chrome-line);
+  }
+  .sheet thead th.corner { left: 0; z-index: 4; width: 40px; }
+  .sheet thead th.hl, .sheet tbody th.hl { background: #d6dde6; color: var(--ink); }
+  .sheet td { background: var(--cell); position: relative; }
+  /* Texto que desborda hacia celdas vecinas vacías, como en una hoja real */
+  td.spill { overflow: visible; z-index: 1; }
+  td.spill span { position: absolute; left: 4px; top: 4px; }
+  td.title span { top: 3px; font-weight: 700; font-size: 14px; color: var(--ink); }
+  td.note span { color: var(--ink-3); font-size: 12px; }
+
+  /* Celdas del tablero */
+  td.c { cursor: cell; text-align: right; }
+  /* Marco del rango con formato (delimita el tablero sin parecer un juego) */
+  td.bT { border-top: 1px solid #b9c0ca; }
+  td.bL { border-left: 1px solid #b9c0ca; }
+  td.bR { border-right: 1px solid #b9c0ca; }
+  td.bB { border-bottom: 1px solid #b9c0ca; }
+  td.o { background: var(--cell-open); }
+  td.n1 { color: #34597d; } td.n2 { color: #3b6a52; } td.n3 { color: #5b4f7a; } td.n4 { color: #253a5c; }
+  td.n5 { color: #5a4636; } td.n6 { color: #2f6464; } td.n7 { color: #2b2f36; } td.n8 { color: #6b717b; }
+  /* Bandera = indicador de comentario */
+  td.f::after, .flagdemo::after {
+    content: ""; position: absolute; top: 0; right: 0; width: 0; height: 0;
+    border-top: 7px solid var(--flag); border-left: 7px solid transparent;
+  }
+  td.m { color: var(--ref); }
+  td.x { background: var(--ref-bg); color: var(--ref); }
+  td.sel { outline: 2px solid var(--sel); outline-offset: -2px; z-index: 1; }
+
+  /* ===== Vistas seguras: Dashboard y Leyenda ===== */
+  .vista { position: relative; width: max-content; }
+  .vista td.h { background: #eef1f5; font-weight: 700; color: var(--ink); }
+  .vista td.k { font-weight: 700; }
+  .vista td.num { text-align: right; }
+  .vista td.muted { color: var(--ink-3); }
+  .vista .bar { display: inline-block; height: 8px; border-radius: 0 2px 2px 0; background: #9fb3c8; vertical-align: middle; margin-right: 6px; }
+  .pill { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 11px; line-height: 14px; }
+  .pill.ok { background: #e2efe6; color: #2d6140; }
+  .pill.run { background: #e3ebf2; color: #2f5578; }
+  .pill.pend { background: #eceef1; color: #50575f; }
+  .pill.late { background: #f7e6e1; color: #8a3326; }
+  .ref { color: var(--ref); }
+  .chartobj {
+    position: absolute; background: #fff; border: 1px solid #c7ccd3;
+    box-shadow: 0 1px 3px rgba(20, 30, 45, .12); padding: 8px 10px;
+  }
+  .chartobj h3 { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: var(--ink); text-align: center; }
+  .chartobj svg { display: block; }
+
+  /* ===== Pestañas de hoja ===== */
+  .tabs {
+    display: flex; align-items: stretch; background: var(--chrome);
+    border-top: 1px solid var(--chrome-line); overflow-x: auto; scrollbar-width: none; white-space: nowrap;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs .nav { flex: none; padding: 4px 8px; color: var(--ink-3); }
+  .tab {
+    flex: none; padding: 5px 14px; border: 0; border-right: 1px solid var(--chrome-line);
+    background: transparent; color: var(--ink-2); font: inherit; cursor: pointer;
+  }
+  .tab:hover { background: var(--chrome-2); }
+  .tab[aria-selected="true"] { background: #fff; color: var(--accent); font-weight: 700; box-shadow: inset 0 -2px 0 var(--accent); }
+  .tab:focus-visible { outline: 2px solid var(--sel); outline-offset: -2px; }
+  .tab.add { color: var(--ink-3); font-weight: 400; }
+
+  /* ===== Barra de estado ===== */
+  .status {
+    display: flex; align-items: center; gap: 18px; padding: 3px 12px;
+    padding-bottom: calc(3px + env(safe-area-inset-bottom, 0px));
+    background: var(--chrome); border-top: 1px solid var(--chrome-line);
+    color: var(--ink-2); font-size: 12px; white-space: nowrap; overflow: hidden;
+    font-variant-numeric: tabular-nums;
+  }
+  .status .spacer { flex: 1; }
+  /* Selector de idioma con aspecto de indicador de estado */
+  #btnIdioma {
+    border: 0; background: transparent; color: inherit; font: inherit; padding: 1px 4px;
+    border-radius: 2px; cursor: pointer;
+  }
+  #btnIdioma:hover { background: var(--chrome-2); }
+  #btnIdioma:focus-visible { outline: 2px solid var(--sel); }
+
+  /* ===== Aviso discreto (toast) ===== */
+  .toast {
+    position: fixed; right: 16px; bottom: 64px; max-width: calc(100% - 32px);
+    background: #fff; color: var(--ink); border: 1px solid var(--chrome-line); border-left: 3px solid var(--accent);
+    box-shadow: 0 2px 8px rgba(20, 30, 45, .15); padding: 8px 12px; font-size: 13px; z-index: 10;
+  }
+  .toast.err { border-left-color: var(--ref); }
+
+  @media (max-width: 560px) {
+    .titlebar .saved, .menubar span:nth-child(n+5) { display: none; }
+    .status { gap: 10px; }
+    .status .opt { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="titlebar">
+    <a class="launcher" id="lnkPortal" href="../index.html"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="2" cy="2" r="1.4"/><circle cx="7" cy="2" r="1.4"/><circle cx="12" cy="2" r="1.4"/><circle cx="2" cy="7" r="1.4"/><circle cx="7" cy="7" r="1.4"/><circle cx="12" cy="7" r="1.4"/><circle cx="2" cy="12" r="1.4"/><circle cx="7" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/></svg></a>
+    <span class="doc" id="docName"></span>
+    <span class="saved" data-t="guardado"></span>
+    <span class="spacer"></span>
+    <span class="user" aria-hidden="true">LF</span>
+  </header>
+
+  <nav class="menubar" id="menubar" aria-label="Menú"></nav>
+
+  <div class="toolbar" role="toolbar" aria-label="Herramientas">
+    <button class="tb" type="button" data-tt="guardar" tabindex="-1"><svg viewBox="0 0 16 16"><path d="M3 2h8l2 2v10H3z"/><path d="M5 2v4h6V2M5 14v-4h6v4"/></svg></button>
+    <button class="tb" type="button" data-tt="deshacer" tabindex="-1"><svg viewBox="0 0 16 16"><path d="M5 4L2 7l3 3"/><path d="M2 7h7a4 4 0 010 8H7"/></svg></button>
+    <button class="tb" type="button" data-tt="rehacer" tabindex="-1"><svg viewBox="0 0 16 16"><path d="M11 4l3 3-3 3"/><path d="M14 7H7a4 4 0 000 8h2"/></svg></button>
+    <span class="sep"></span>
+    <button class="tb" id="btnRecalc" type="button" data-tt="recalcTip">
+      <svg viewBox="0 0 16 16"><path d="M13 3v4H9"/><path d="M13 7a5 5 0 10-1.4 4.5"/></svg><span data-t="recalc"></span>
+    </button>
+    <span class="sep"></span>
+    <span class="combo" style="width:96px">Calibri</span>
+    <span class="combo" style="width:44px">11</span>
+    <span class="sep"></span>
+    <button class="tb txt" type="button" data-tt="negrita" tabindex="-1"><b data-t="n"></b></button>
+    <button class="tb txt" type="button" data-tt="cursiva" tabindex="-1"><i data-t="k"></i></button>
+    <button class="tb txt" type="button" data-tt="subrayado" tabindex="-1"><u data-t="s"></u></button>
+    <span class="sep"></span>
+    <button class="tb" type="button" data-tt="izq" tabindex="-1"><svg viewBox="0 0 16 16"><path d="M2 4h12M2 7h8M2 10h12M2 13h8"/></svg></button>
+    <button class="tb" type="button" data-tt="centro" tabindex="-1"><svg viewBox="0 0 16 16"><path d="M2 4h12M4 7h8M2 10h12M4 13h8"/></svg></button>
+    <button class="tb" type="button" data-tt="der" tabindex="-1"><svg viewBox="0 0 16 16"><path d="M2 4h12M6 7h8M2 10h12M6 13h8"/></svg></button>
+    <span class="sep"></span>
+    <button class="tb" type="button" data-tt="bordes" tabindex="-1"><svg viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12"/><path d="M8 2v12M2 8h12" stroke-dasharray="1.5 1.5"/></svg></button>
+    <button class="tb" type="button" data-tt="relleno" tabindex="-1"><svg viewBox="0 0 16 16"><path d="M3 9l5-5 4 4-5 5z"/><path d="M2 15h12" stroke="#d9b44a" stroke-width="2.4"/></svg></button>
+    <button class="tb" type="button" data-tt="formatoNum" tabindex="-1"><svg viewBox="0 0 16 16"><path d="M3 12L6 4M8 12l3-8M2 7h10M2 10h10"/></svg></button>
+    <span class="sep"></span>
+    <button class="tb" type="button" data-tt="autosuma" tabindex="-1"><svg viewBox="0 0 16 16"><path d="M12 3H4l5 5-5 5h8"/></svg></button>
+    <button class="tb" type="button" data-tt="ordenar" tabindex="-1"><svg viewBox="0 0 16 16"><path d="M4 3v10M2 11l2 2 2-2M9 4h5M9 8h4M9 12h3"/></svg></button>
+    <button class="tb" type="button" data-tt="filtro" tabindex="-1"><svg viewBox="0 0 16 16"><path d="M2 3h12L9.5 8.5V13l-3-1.5v-3z"/></svg></button>
+    <button class="tb" type="button" data-tt="grafico" tabindex="-1"><svg viewBox="0 0 16 16"><path d="M2 14h12M4 12V8M8 12V4M12 12V7"/></svg></button>
+  </div>
+
+  <div class="formulabar">
+    <input id="nameBox" readonly>
+    <span class="fx" aria-hidden="true">fx</span>
+    <input id="formula" readonly>
+  </div>
+
+  <main class="sheetwrap" id="sheetWrap" tabindex="0">
+    <table class="sheet" id="board"></table>
+    <div class="vista" id="vistaDash" hidden></div>
+    <div class="vista" id="vistaLey" hidden></div>
+  </main>
+
+  <div class="tabs" role="tablist" id="tabs">
+    <span class="nav" aria-hidden="true">◂ ▸</span>
+  </div>
+
+  <footer class="status">
+    <span data-t="listo"></span>
+    <span class="spacer"></span>
+    <span id="stPend"></span>
+    <span id="stTime"></span>
+    <button id="btnIdioma" type="button"></button>
+    <span class="opt">▦ ▤ ▥</span>
+    <span class="opt">100 %</span>
+  </footer>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+</div>
+
+<script>
+/* =====================================================================
+   CONSTANTES (editar aquí niveles, textos y aspecto de la hoja)
+   ===================================================================== */
+
+// Niveles: la clave es interna; el nombre visible de cada pestaña está en TEXTOS
+const NIVELES = {
+  resumen: { ancho: 9,  alto: 9,  minas: 10 },
+  detalle: { ancho: 16, alto: 16, minas: 40 },
+  anual:   { ancho: 30, alto: 16, minas: 99 },
+};
+// Vistas seguras: no reinician la partida y pausan el cronómetro
+const VISTAS_SEGURAS = ["dashboard", "leyenda"];
+const PANICO = "dashboard";              // vista a la que salta Esc
+
+// Posición del tablero dentro de la hoja: empieza en B3 (col 1, fila 2 en base 0)
+const DESPL_COL = 1, DESPL_FILA = 2;
+const DURACION_TOAST = 4000;
+const PULSACION_LARGA_MS = 450;
+
+/* ---------- Textos en español e inglés ----------
+   Cada idioma tiene exactamente las mismas claves. Para añadir otro idioma,
+   copia un bloque entero y traduce los valores. */
+const TEXTOS = {
+  es: {
+    nombreIdioma: "Español (España)",
+    documento: "Seguimiento_Q4_v3_FINAL.xlsx",
+    guardado: "Guardado en la nube",
+    menus: ["Archivo", "Editar", "Ver", "Insertar", "Formato", "Datos"],
+    recalc: "Recalcular", n: "N", k: "K", s: "S",
+    tt: {
+      guardar: "Guardar", deshacer: "Deshacer", rehacer: "Rehacer", recalcTip: "Recalcular",
+      negrita: "Negrita", cursiva: "Cursiva", subrayado: "Subrayado",
+      izq: "Alinear a la izquierda", centro: "Centrar", der: "Alinear a la derecha",
+      bordes: "Bordes", relleno: "Color de relleno", formatoNum: "Formato de número",
+      autosuma: "Autosuma", ordenar: "Ordenar", filtro: "Filtro", grafico: "Insertar gráfico",
+      nuevaHoja: "Nueva hoja", idioma: "Idioma de edición", portal: "Aplicaciones",
+    },
+    hojas: { resumen: "Resumen", detalle: "Detalle", anual: "Anual", dashboard: "Dashboard", leyenda: "Leyenda" },
+    listo: "Listo",
+    pendientes: "Pendientes: ",
+    tiempo: "Tiempo de cálculo: ",
+    victoria: "Cálculo completado sin errores.",
+    derrota: "Se encontraron referencias no válidas.",
+    mina: "#¡REF!",
+    tituloHoja: "Control de incidencias — ",
+    notaHoja: "Datos actualizados automáticamente. Ver hoja Leyenda antes de modificar el rango.",
+    etiquetas: { nombre: "Cuadro de nombre", formula: "Barra de fórmulas", hoja: "Hoja de cálculo", hojas: "Hojas", menu: "Menú" },
+    formulas: [
+      '=SUMAR.SI(D2:D40;"Pendiente")',
+      '=CONTAR.SI(Estado!C:C;"Cerrado")',
+      '=BUSCARV(B{r};Maestro!A:F;4;FALSO)',
+      '=SI(E{r}>0,8;"OK";"Revisar")',
+      '=REDONDEAR(F{r}*1,21;2)',
+      '=SI.ERROR(C{r}/D{r};0)',
+      '=PROMEDIO(G2:G{r})',
+      '=HOY()-H{r}',
+      '=CONCATENAR(A{r};" - ";B{r})',
+      '=SUMAPRODUCTO((C2:C40="Q4")*(E2:E40))',
+      '=INDICE(Datos!B:B;COINCIDIR(A{r};Datos!A:A;0))',
+      '=CONTAR.SI.CONJUNTO(G:G;"Abierto";H:H;"<"&HOY())',
+    ],
+    pct: v => v + " %",
+    dash: {
+      cabecera: ["ID", "Tarea", "Responsable", "Inicio", "Fin", "% avance", "Estado"],
+      tareas: ["Ingeniería de detalle", "Validación de requisitos", "Aprovisionamiento", "Contratación de subcontratas",
+               "Plan de calidad", "Ejecución fase 1", "Pruebas de aceptación", "Documentación final", "Cierre y lecciones aprendidas"],
+      estados: { ok: "Completado", run: "En curso", pend: "Pendiente", late: "Retrasado" },
+      media: "Media",
+      grafico: "% de avance por tarea",
+    },
+    ley: {
+      titulo: "Leyenda de uso — Hoja de control de incidencias",
+      rev: "Rev. 3 · Documento controlado · Uso interno",
+      cabecera: ["Concepto", "Acción", "Descripción"],
+      filas: [
+        ["Revisar celda", "Clic izquierdo · Intro", "Valida la referencia. El valor indica cuántas incidencias hay en las 8 celdas contiguas."],
+        ["Marcar incidencia", "Clic derecho · Espacio · Pulsación larga", "Añade un comentario de seguimiento (marca roja en la esquina). Una celda comentada no se valida por error."],
+        ["Validación en bloque", "Clic sobre un valor", "Si ya están marcadas todas sus incidencias contiguas, valida de una vez el resto de celdas adyacentes."],
+        ["Navegación", "Flechas", "Mueve la celda activa dentro del rango con formato."],
+        ["Recalcular", "Botón «Recalcular»", "Regenera el rango con datos nuevos. La primera celda revisada nunca contiene incidencia."],
+        ["Vista ejecutiva", "Esc", "Cambia al Dashboard y congela el tiempo de cálculo. Esc de nuevo para volver al punto exacto."],
+        ["Pendientes", "Barra de estado", "Incidencias totales menos comentarios añadidos."],
+        ["#¡REF!", "—", "Referencia no válida: el cálculo se detiene y se muestran todas las incidencias."],
+        ["Cálculo completado", "—", "Todas las celdas sin incidencia están validadas."],
+        ["Idioma", "Barra de estado", "Pulse el indicador de idioma para alternar entre español e inglés."],
+      ],
+      cabHojas: ["Hoja", "Rango", "Incidencias"],
+      hojas: [["Resumen", "9 × 9", 10], ["Detalle", "16 × 16", 40], ["Anual", "30 × 16", 99]],
+    },
+  },
+  en: {
+    nombreIdioma: "English (UK)",
+    documento: "Q4_Tracking_v3_FINAL.xlsx",
+    guardado: "Saved to cloud",
+    menus: ["File", "Edit", "View", "Insert", "Format", "Data"],
+    recalc: "Recalculate", n: "B", k: "I", s: "U",
+    tt: {
+      guardar: "Save", deshacer: "Undo", rehacer: "Redo", recalcTip: "Recalculate",
+      negrita: "Bold", cursiva: "Italic", subrayado: "Underline",
+      izq: "Align left", centro: "Center", der: "Align right",
+      bordes: "Borders", relleno: "Fill colour", formatoNum: "Number format",
+      autosuma: "AutoSum", ordenar: "Sort", filtro: "Filter", grafico: "Insert chart",
+      nuevaHoja: "New sheet", idioma: "Editing language", portal: "Apps",
+    },
+    hojas: { resumen: "Summary", detalle: "Detail", anual: "Annual", dashboard: "Dashboard", leyenda: "Legend" },
+    listo: "Ready",
+    pendientes: "Pending: ",
+    tiempo: "Calc time: ",
+    victoria: "Calculation completed with no errors.",
+    derrota: "Invalid references were found.",
+    mina: "#REF!",
+    tituloHoja: "Issue log — ",
+    notaHoja: "Data updated automatically. See the Legend sheet before editing the range.",
+    etiquetas: { nombre: "Name box", formula: "Formula bar", hoja: "Spreadsheet", hojas: "Sheets", menu: "Menu" },
+    formulas: [
+      '=SUMIF(D2:D40,"Pending")',
+      '=COUNTIF(Status!C:C,"Closed")',
+      '=VLOOKUP(B{r},Master!A:F,4,FALSE)',
+      '=IF(E{r}>0.8,"OK","Review")',
+      '=ROUND(F{r}*1.21,2)',
+      '=IFERROR(C{r}/D{r},0)',
+      '=AVERAGE(G2:G{r})',
+      '=TODAY()-H{r}',
+      '=CONCATENATE(A{r}," - ",B{r})',
+      '=SUMPRODUCT((C2:C40="Q4")*(E2:E40))',
+      '=INDEX(Data!B:B,MATCH(A{r},Data!A:A,0))',
+      '=COUNTIFS(G:G,"Open",H:H,"<"&TODAY())',
+    ],
+    pct: v => v + "%",
+    dash: {
+      cabecera: ["ID", "Task", "Owner", "Start", "End", "% complete", "Status"],
+      tareas: ["Detailed engineering", "Requirements validation", "Procurement", "Subcontractor award",
+               "Quality plan", "Phase 1 execution", "Acceptance testing", "Final documentation", "Close-out & lessons learned"],
+      estados: { ok: "Complete", run: "In progress", pend: "Not started", late: "Delayed" },
+      media: "Average",
+      grafico: "% complete by task",
+    },
+    ley: {
+      titulo: "Usage legend — Issue log sheet",
+      rev: "Rev. 3 · Controlled document · Internal use",
+      cabecera: ["Item", "Action", "Description"],
+      filas: [
+        ["Review cell", "Left click · Enter", "Validates the reference. The value shows how many issues sit in the 8 adjacent cells."],
+        ["Flag issue", "Right click · Space · Long press", "Adds a tracking comment (red corner mark). A commented cell cannot be validated by mistake."],
+        ["Bulk validation", "Click on a value", "If all its adjacent issues are already flagged, validates the remaining adjacent cells at once."],
+        ["Navigation", "Arrow keys", "Moves the active cell within the formatted range."],
+        ["Recalculate", "“Recalculate” button", "Regenerates the range with new data. The first reviewed cell never holds an issue."],
+        ["Executive view", "Esc", "Switches to the Dashboard and freezes calc time. Press Esc again to return to the same point."],
+        ["Pending", "Status bar", "Total issues minus comments added."],
+        ["#REF!", "—", "Invalid reference: calculation stops and all issues are shown."],
+        ["Calculation completed", "—", "Every issue-free cell has been validated."],
+        ["Language", "Status bar", "Click the language indicator to switch between Spanish and English."],
+      ],
+      cabHojas: ["Sheet", "Range", "Issues"],
+      hojas: [["Summary", "9 × 9", 10], ["Detail", "16 × 16", 40], ["Annual", "30 × 16", 99]],
+    },
+  },
+};
+
+// Datos del Dashboard que no dependen del idioma (el nombre de la tarea sale de TEXTOS)
+const DATOS_DASH = [
+  ["T-101", "L. Ferrer",  "01/10/2026", "24/10/2026", 100, "ok"],
+  ["T-102", "M. Ortega",  "06/10/2026", "31/10/2026", 100, "ok"],
+  ["T-103", "A. Soler",   "13/10/2026", "21/11/2026", 72,  "run"],
+  ["T-104", "C. Navarro", "20/10/2026", "14/11/2026", 88,  "run"],
+  ["T-105", "R. Vidal",   "27/10/2026", "07/11/2026", 45,  "late"],
+  ["T-106", "J. Pastor",  "03/11/2026", "12/12/2026", 38,  "run"],
+  ["T-107", "E. Molina",  "01/12/2026", "19/12/2026", 0,   "pend"],
+  ["T-108", "L. Ferrer",  "08/12/2026", "23/12/2026", 0,   "pend"],
+  ["T-109", "M. Ortega",  "15/12/2026", "30/12/2026", 0,   "pend"],
+];
+
+/* =====================================================================
+   LÓGICA DEL JUEGO (solo estado, sin DOM)
+   ===================================================================== */
+const OCULTA = 0, REVELADA = 1, BANDERA = 2;
+
+function crearPartida(nivel) {
+  const { ancho, alto, minas } = NIVELES[nivel];
+  const n = ancho * alto;
+  return {
+    nivel, ancho, alto, minas,
+    mina: new Uint8Array(n),        // 1 si hay mina
+    vecinas: new Uint8Array(n),     // número de minas adyacentes
+    estado: new Uint8Array(n),      // OCULTA / REVELADA / BANDERA
+    fase: "lista",                  // lista | jugando | ganada | perdida
+    reveladas: 0,
+    banderas: 0,
+    explotada: -1,
+    msAcumulados: 0,                // cronómetro: tiempo ya contado
+    inicio: 0,                      // marca de tiempo del tramo en curso (0 = parado)
+  };
+}
+
+// Índices de las celdas vecinas (hasta 8)
+function vecinosDe(p, i) {
+  const x = i % p.ancho, y = (i / p.ancho) | 0, res = [];
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    if (!dx && !dy) continue;
+    const nx = x + dx, ny = y + dy;
+    if (nx >= 0 && ny >= 0 && nx < p.ancho && ny < p.alto) res.push(ny * p.ancho + nx);
+  }
+  return res;
+}
+
+// Coloca las minas tras el primer clic, excluyendo esa celda y sus vecinas
+function colocarMinas(p, primera) {
+  const excluidas = new Set([primera, ...vecinosDe(p, primera)]);
+  const candidatas = [];
+  for (let i = 0; i < p.mina.length; i++) if (!excluidas.has(i)) candidatas.push(i);
+  // Fisher-Yates parcial: solo barajamos las posiciones que necesitamos
+  for (let k = 0; k < p.minas; k++) {
+    const j = k + Math.floor(Math.random() * (candidatas.length - k));
+    [candidatas[k], candidatas[j]] = [candidatas[j], candidatas[k]];
+    p.mina[candidatas[k]] = 1;
+  }
+  for (let i = 0; i < p.mina.length; i++) {
+    p.vecinas[i] = vecinosDe(p, i).reduce((s, v) => s + p.mina[v], 0);
+  }
+}
+
+function terminada(p) { return p.fase === "ganada" || p.fase === "perdida"; }
+
+// Revela una celda. Devuelve la lista de índices que han cambiado.
+function revelar(p, i) {
+  if (terminada(p) || p.estado[i] !== OCULTA) return [];
+  if (p.fase === "lista") { colocarMinas(p, i); p.fase = "jugando"; }
+
+  if (p.mina[i]) { perder(p, i); return todasLasCeldas(p); }
+
+  // Relleno iterativo con pila (sin recursión)
+  const cambiadas = [], pila = [i];
+  while (pila.length) {
+    const c = pila.pop();
+    if (p.estado[c] !== OCULTA) continue;
+    p.estado[c] = REVELADA; p.reveladas++; cambiadas.push(c);
+    if (p.vecinas[c] === 0) {
+      for (const v of vecinosDe(p, c)) if (p.estado[v] === OCULTA && !p.mina[v]) pila.push(v);
+    }
+  }
+  comprobarVictoria(p);
+  return terminada(p) ? todasLasCeldas(p) : cambiadas;
+}
+
+// Chord: sobre un número con tantas banderas vecinas como su valor, revela el resto
+function acorde(p, i) {
+  if (terminada(p) || p.estado[i] !== REVELADA || p.vecinas[i] === 0) return [];
+  const vec = vecinosDe(p, i);
+  const banderas = vec.filter(v => p.estado[v] === BANDERA).length;
+  if (banderas !== p.vecinas[i]) return [];
+  let cambiadas = [];
+  for (const v of vec) {
+    if (p.estado[v] === OCULTA) cambiadas = cambiadas.concat(revelar(p, v));
+    if (terminada(p)) return todasLasCeldas(p);
+  }
+  return cambiadas;
+}
+
+function alternarBandera(p, i) {
+  if (terminada(p) || p.estado[i] === REVELADA) return [];
+  if (p.estado[i] === BANDERA) { p.estado[i] = OCULTA; p.banderas--; }
+  else { p.estado[i] = BANDERA; p.banderas++; }
+  return [i];
+}
+
+function perder(p, i) { p.fase = "perdida"; p.explotada = i; pararCrono(p); }
+
+function comprobarVictoria(p) {
+  if (p.reveladas === p.ancho * p.alto - p.minas) {
+    p.fase = "ganada";
+    // Marca automáticamente las minas restantes
+    for (let i = 0; i < p.mina.length; i++) if (p.mina[i] && p.estado[i] !== BANDERA) { p.estado[i] = BANDERA; p.banderas++; }
+    pararCrono(p);
+  }
+}
+
+function todasLasCeldas(p) { return Array.from({ length: p.mina.length }, (_, k) => k); }
+
+// Cronómetro por tramos: se puede pausar (vistas seguras) sin perder tiempo
+function arrancarCrono(p) { if (!p.inicio && p.fase === "jugando") p.inicio = performance.now(); }
+function pararCrono(p) { if (p.inicio) { p.msAcumulados += performance.now() - p.inicio; p.inicio = 0; } }
+function msTranscurridos(p) { return p.msAcumulados + (p.inicio ? performance.now() - p.inicio : 0); }
+
+/* =====================================================================
+   RENDERIZADO (DOM)
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const el = {
+  tabla: $("board"), dash: $("vistaDash"), ley: $("vistaLey"), wrap: $("sheetWrap"),
+  nombre: $("nameBox"), formula: $("formula"), tabs: $("tabs"),
+  pend: $("stPend"), tiempo: $("stTime"), toast: $("toast"), idioma: $("btnIdioma"),
+};
+
+let idioma = "es";
+let T = TEXTOS.es;           // atajo a los textos del idioma activo
+let partida = null;          // partida del nivel actual
+let celdas = [];             // td de cada celda del tablero
+let seleccion = 0;           // índice de la celda seleccionada
+let vista = "juego";         // "juego" o una de VISTAS_SEGURAS
+let nivelActual = "resumen";
+
+function letraColumna(n) {       // 0 -> A, 25 -> Z, 26 -> AA
+  let s = ""; n++;
+  while (n > 0) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = (n - 1 - r) / 26 | 0; }
+  return s;
+}
+
+// Construye la hoja completa con el tablero incrustado a partir de B3
+function construirHoja() {
+  const p = partida;
+  const cols = Math.max(p.ancho + DESPL_COL + 3, 26);
+  const filas = Math.max(p.alto + DESPL_FILA + 6, 40);
+  const html = [];
+
+  html.push('<colgroup><col style="width:40px">');
+  for (let c = 0; c < cols; c++) html.push('<col style="width:var(--colw)">');
+  html.push('</colgroup><thead><tr><th class="corner"></th>');
+  for (let c = 0; c < cols; c++) html.push(`<th data-col="${c}">${letraColumna(c)}</th>`);
+  html.push('</tr></thead><tbody>');
+
+  for (let f = 0; f < filas; f++) {
+    html.push(`<tr><th data-row="${f}">${f + 1}</th>`);
+    for (let c = 0; c < cols; c++) {
+      const x = c - DESPL_COL, y = f - DESPL_FILA;
+      if (x >= 0 && y >= 0 && x < p.ancho && y < p.alto) {
+        // Bordes del rango con formato
+        let cls = "c";
+        if (y === 0) cls += " bT"; if (x === 0) cls += " bL";
+        if (x === p.ancho - 1) cls += " bR"; if (y === p.alto - 1) cls += " bB";
+        html.push(`<td class="${cls}" data-i="${y * p.ancho + x}"></td>`);
+      } else if (f === 0 && c === DESPL_COL) {
+        html.push('<td class="spill title"><span id="celdaTitulo"></span></td>');
+      } else if (f === DESPL_FILA + p.alto + 1 && c === DESPL_COL) {
+        html.push('<td class="spill note"><span id="celdaNota"></span></td>');
+      } else {
+        html.push("<td></td>");
+      }
+    }
+    html.push("</tr>");
+  }
+  html.push("</tbody>");
+  el.tabla.innerHTML = html.join("");
+
+  celdas = new Array(p.ancho * p.alto);
+  el.tabla.querySelectorAll("td.c").forEach(td => { celdas[+td.dataset.i] = td; });
+  textosHoja();
+}
+
+function textosHoja() {
+  $("celdaTitulo").textContent = T.tituloHoja + T.hojas[nivelActual];
+  $("celdaNota").textContent = T.notaHoja;
+}
+
+// Actualiza solo las celdas indicadas (rápido en 30×16)
+function pintarCeldas(indices) {
+  const p = partida, perdida = p.fase === "perdida";
+  for (const i of indices) {
+    const td = celdas[i];
+    let cls = td.className.replace(/\s(o|f|m|x|n\d)\b/g, "");
+    let txt = "";
+    const est = p.estado[i];
+    if (est === REVELADA) {
+      cls += " o";
+      if (p.vecinas[i]) { txt = p.vecinas[i]; cls += " n" + p.vecinas[i]; }
+    } else if (perdida && p.mina[i] && est !== BANDERA) {
+      txt = T.mina; cls += i === p.explotada ? " x" : " m";
+    } else if (est === BANDERA) {
+      cls += " f";
+    }
+    td.className = cls;
+    td.textContent = txt;
+  }
+}
+
+function pintarTodo() { pintarCeldas(todasLasCeldas(partida)); marcarSeleccion(seleccion, false); pintarEstado(); }
+
+function pintarEstado() {
+  el.pend.textContent = T.pendientes + (partida.minas - partida.banderas);
+  const s = Math.floor(msTranscurridos(partida) / 1000);
+  el.tiempo.textContent = T.tiempo +
+    String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+}
+
+// Selección de celda: borde, cabeceras resaltadas y barra de fórmulas
+let cabecerasHL = [];
+function marcarSeleccion(i, desplazar = true) {
+  celdas[seleccion]?.classList.remove("sel");
+  cabecerasHL.forEach(h => h.classList.remove("hl"));
+  seleccion = i;
+  const td = celdas[i]; td.classList.add("sel");
+  const x = i % partida.ancho + DESPL_COL, y = ((i / partida.ancho) | 0) + DESPL_FILA;
+  cabecerasHL = [el.tabla.querySelector(`th[data-col="${x}"]`), el.tabla.querySelector(`th[data-row="${y}"]`)];
+  cabecerasHL.forEach(h => h.classList.add("hl"));
+  el.nombre.value = letraColumna(x) + (y + 1);
+  el.formula.value = T.formulas[(x * 7 + y * 13) % T.formulas.length].replace(/\{r\}/g, y + 1);
+  if (desplazar) td.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+let temporizadorToast = 0, toastActual = null;
+function mostrarToast(clave, error) {
+  toastActual = clave;
+  el.toast.textContent = T[clave];
+  el.toast.className = "toast" + (error ? " err" : "");
+  el.toast.hidden = false;
+  clearTimeout(temporizadorToast);
+  temporizadorToast = setTimeout(() => { el.toast.hidden = true; }, DURACION_TOAST);
+}
+
+/* ===== Acciones (conectan lógica y render) ===== */
+function aplicar(cambiadas) {
+  if (!cambiadas.length) return;
+  arrancarCrono(partida);
+  pintarCeldas(cambiadas);
+  pintarEstado();
+  if (partida.fase === "ganada") mostrarToast("victoria", false);
+  if (partida.fase === "perdida") mostrarToast("derrota", true);
+}
+
+function accionRevelar(i) {
+  if (partida.estado[i] === REVELADA) aplicar(acorde(partida, i));
+  else aplicar(revelar(partida, i));   // con bandera no hace nada (lo controla revelar)
+}
+function accionBandera(i) { aplicar(alternarBandera(partida, i)); }
+
+function nuevaPartida(nivel) {
+  nivelActual = nivel;
+  partida = crearPartida(nivel);
+  construirHoja();
+  seleccion = 0;
+  el.toast.hidden = true;
+  pintarTodo();
+  el.wrap.scrollTo(0, 0);
+}
+
+/* ===== Pestañas y vistas ===== */
+function construirPestanas() {
+  [...Object.keys(NIVELES), ...VISTAS_SEGURAS].forEach(clave => {
+    const b = document.createElement("button");
+    b.className = "tab"; b.type = "button"; b.dataset.hoja = clave;
+    b.setAttribute("role", "tab");
+    b.addEventListener("click", () => irA(clave));
+    el.tabs.appendChild(b);
+  });
+  const mas = document.createElement("button");
+  mas.className = "tab add"; mas.type = "button"; mas.textContent = "+"; mas.tabIndex = -1; mas.id = "tabMas";
+  el.tabs.appendChild(mas);
+}
+
+function marcarPestana() {
+  const activa = vista === "juego" ? nivelActual : vista;
+  el.tabs.querySelectorAll(".tab[data-hoja]").forEach(t => t.setAttribute("aria-selected", String(t.dataset.hoja === activa)));
+}
+
+function irA(clave) {
+  if (VISTAS_SEGURAS.includes(clave)) mostrarVista(clave);
+  else if (vista !== "juego" && clave === nivelActual) volverAlJuego();   // misma hoja: se restaura
+  else if (vista === "juego" && clave === nivelActual) return;
+  else {
+    vista = "juego"; ocultarVistas();
+    nuevaPartida(clave);
+    marcarPestana();
+    el.wrap.focus({ preventScroll: true });
+  }
+}
+
+let scrollGuardado = [0, 0];
+function ocultarVistas() { el.dash.hidden = el.ley.hidden = true; el.tabla.hidden = false; }
+
+function mostrarVista(clave) {
+  if (vista === clave) return;
+  if (vista === "juego") {                 // al salir del juego: pausa y recuerda el scroll
+    pararCrono(partida);
+    scrollGuardado = [el.wrap.scrollLeft, el.wrap.scrollTop];
+  }
+  vista = clave;
+  el.tabla.hidden = true; el.toast.hidden = true;
+  el.dash.hidden = clave !== "dashboard";
+  el.ley.hidden = clave !== "leyenda";
+  el.wrap.scrollTo(0, 0);
+  barraFormulasVista();
+  marcarPestana();
+}
+
+function barraFormulasVista() {
+  el.nombre.value = "A1";
+  el.formula.value = vista === "dashboard" ? T.dash.cabecera[0] : T.ley.titulo;
+}
+
+function volverAlJuego() {
+  vista = "juego";
+  ocultarVistas();
+  marcarPestana();
+  el.wrap.scrollTo(scrollGuardado[0], scrollGuardado[1]);
+  marcarSeleccion(seleccion, false);
+  if (partida.fase === "jugando") arrancarCrono(partida);
+  pintarEstado();
+}
+
+// Cabeceras de columna y filas para las vistas que imitan una hoja
+function tablaHoja(anchos, cols, filas, celda) {
+  const html = ['<table class="sheet"><colgroup><col style="width:40px">'];
+  for (let c = 0; c < cols; c++) html.push(`<col style="width:${anchos[c] || 64}px">`);
+  html.push('</colgroup><thead><tr><th class="corner"></th>');
+  for (let c = 0; c < cols; c++) html.push(`<th>${letraColumna(c)}</th>`);
+  html.push("</tr></thead><tbody>");
+  for (let f = 0; f < filas; f++) {
+    html.push(`<tr><th>${f + 1}</th>`);
+    for (let c = 0; c < cols; c++) html.push(celda(f, c) || "<td></td>");
+    html.push("</tr>");
+  }
+  html.push("</tbody></table>");
+  return html.join("");
+}
+
+/* ===== Dashboard: datos ficticios + gráfico SVG ===== */
+function construirDashboard() {
+  const anchos = [60, 210, 96, 86, 86, 110, 96];
+  const D = T.dash, n = DATOS_DASH.length;
+  const media = Math.round(DATOS_DASH.reduce((s, d) => s + d[4], 0) / n);
+  const tabla = tablaHoja(anchos, 16, 40, (f, c) => {
+    const d = DATOS_DASH[f - 1];
+    if (f === 0 && c < 7) return `<td class="h">${D.cabecera[c]}</td>`;
+    if (d && c < 7) {
+      if (c === 0) return `<td>${d[0]}</td>`;
+      if (c === 1) return `<td>${D.tareas[f - 1]}</td>`;
+      if (c === 2) return `<td>${d[1]}</td>`;
+      if (c === 3 || c === 4) return `<td class="num">${d[c - 1]}</td>`;
+      if (c === 5) return `<td class="num"><span class="bar" style="width:${Math.round(d[4] * 0.5)}px"></span>${T.pct(d[4])}</td>`;
+      if (c === 6) return `<td><span class="pill ${d[5]}">${D.estados[d[5]]}</span></td>`;
+    }
+    if (f === n + 2 && c === 4) return `<td class="h">${D.media}</td>`;
+    if (f === n + 2 && c === 5) return `<td class="num h">${T.pct(media)}</td>`;
+  });
+  // Objeto de gráfico flotante sobre la hoja (columna I, fila 2)
+  const izq = 40 + anchos.reduce((s, a) => s + a, 0) + 64 + 12;
+  el.dash.innerHTML = tabla + `<div class="chartobj" style="left:${izq}px;top:44px">${graficoBarras()}</div>`;
+}
+
+// Gráfico de barras horizontal: % avance por tarea (una sola serie, escala 0–100)
+function graficoBarras() {
+  const W = 430, filaH = 22, izq = 150, der = 48, sup = 6, inf = 22;
+  const H = sup + DATOS_DASH.length * filaH + inf;
+  const ancho = W - izq - der, esc = v => (v / 100) * ancho;
+  const s = [`<h3>${T.dash.grafico}</h3><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${T.dash.grafico}" font-family="Calibri, Segoe UI, Arial, sans-serif" font-size="11">`];
+  for (const t of [0, 25, 50, 75, 100]) {        // rejilla discreta
+    const x = izq + esc(t);
+    s.push(`<line x1="${x}" y1="${sup}" x2="${x}" y2="${H - inf}" stroke="#e4e7eb"/>`);
+    s.push(`<text x="${x}" y="${H - 7}" text-anchor="middle" fill="#8a919c">${t}</text>`);
+  }
+  DATOS_DASH.forEach((d, k) => {
+    const y = sup + k * filaH, w = esc(d[4]), nombre = T.dash.tareas[k];
+    s.push(`<text x="${izq - 6}" y="${y + 15}" text-anchor="end" fill="#5a6270">${nombre.length > 24 ? nombre.slice(0, 23) + "…" : nombre}</text>`);
+    if (w > 0) s.push(`<path d="M${izq} ${y + 5}h${w - 3}a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3h-${w - 3}z" fill="#466b8c"><title>${nombre}: ${T.pct(d[4])}</title></path>`);
+    s.push(`<text x="${izq + w + 5}" y="${y + 15}" fill="#1f2328">${T.pct(d[4])}</text>`);
+  });
+  s.push(`<line x1="${izq}" y1="${sup}" x2="${izq}" y2="${H - inf}" stroke="#8a919c"/></svg>`);
+  return s.join("");
+}
+
+/* ===== Leyenda: las instrucciones, redactadas como hoja de uso corporativa ===== */
+function construirLeyenda() {
+  const L = T.ley, anchos = [170, 250, 600];
+  const inicioHojas = L.filas.length + 5;       // fila donde empieza la tabla de hojas
+  el.ley.innerHTML = tablaHoja(anchos, 10, 40, (f, c) => {
+    if (f === 0 && c === 0) return `<td class="spill title"><span>${L.titulo}</span></td>`;
+    if (f === 1 && c === 0) return `<td class="spill note"><span>${L.rev}</span></td>`;
+    if (f === 3 && c < 3) return `<td class="h">${L.cabecera[c]}</td>`;
+    const fila = L.filas[f - 4];
+    if (fila && c < 3) {
+      // Muestra de cómo se ven un comentario y un error dentro de la propia leyenda
+      if (c === 0 && f === 5) return `<td class="k flagdemo">${fila[0]}</td>`;
+      if (c === 0 && f === 11) return `<td class="k ref">${fila[0]}</td>`;
+      return `<td class="${c === 0 ? "k" : c === 1 ? "muted" : ""}">${fila[c]}</td>`;
+    }
+    if (f === inicioHojas && c < 3) return `<td class="h">${L.cabHojas[c]}</td>`;
+    const h = L.hojas[f - inicioHojas - 1];
+    if (h && c < 3) return `<td>${h[c]}</td>`;
+  });
+}
+
+/* ===== Idioma ===== */
+function aplicarIdioma(nuevo) {
+  idioma = nuevo; T = TEXTOS[idioma];
+  document.documentElement.lang = idioma;
+  document.title = T.documento;
+  $("docName").textContent = T.documento;
+  $("menubar").innerHTML = T.menus.map(m => `<span>${m}</span>`).join("");
+  document.querySelectorAll("[data-t]").forEach(n => { n.textContent = T[n.dataset.t]; });
+  document.querySelectorAll("[data-tt]").forEach(n => { n.title = T.tt[n.dataset.tt]; });
+  el.tabs.querySelectorAll(".tab[data-hoja]").forEach(t => { t.textContent = T.hojas[t.dataset.hoja]; });
+  $("tabMas").title = T.tt.nuevaHoja;
+  // El enlace al portal lleva el idioma activo
+  $("lnkPortal").href = "../index.html#" + idioma;
+  $("lnkPortal").title = T.tt.portal; $("lnkPortal").setAttribute("aria-label", T.tt.portal);
+  el.idioma.textContent = T.nombreIdioma; el.idioma.title = T.tt.idioma;
+  el.nombre.setAttribute("aria-label", T.etiquetas.nombre);
+  el.formula.setAttribute("aria-label", T.etiquetas.formula);
+  el.wrap.setAttribute("aria-label", T.etiquetas.hoja);
+  el.tabs.setAttribute("aria-label", T.etiquetas.hojas);
+  $("menubar").setAttribute("aria-label", T.etiquetas.menu);
+  construirDashboard();
+  construirLeyenda();
+  // La partida no se toca: solo se vuelven a escribir sus textos
+  if (partida) {
+    textosHoja();
+    pintarCeldas(todasLasCeldas(partida));
+    pintarEstado();
+    if (vista === "juego") marcarSeleccion(seleccion, false); else barraFormulasVista();
+    if (!el.toast.hidden && toastActual) el.toast.textContent = T[toastActual];
+  }
+}
+
+/* =====================================================================
+   ENTRADA: ratón, táctil y teclado
+   ===================================================================== */
+function indiceDe(evento) {
+  const td = evento.target.closest("td.c");
+  return td ? +td.dataset.i : -1;
+}
+
+let ultimoPuntero = "mouse", temporizadorLargo = 0, anularClic = false, origenToque = null;
+
+el.tabla.addEventListener("pointerdown", e => {
+  ultimoPuntero = e.pointerType;
+  const i = indiceDe(e); if (i < 0) return;
+  if (e.pointerType === "touch") {
+    anularClic = false; origenToque = [e.clientX, e.clientY];
+    clearTimeout(temporizadorLargo);
+    temporizadorLargo = setTimeout(() => {          // pulsación larga = bandera
+      anularClic = true; marcarSeleccion(i, false); accionBandera(i);
+    }, PULSACION_LARGA_MS);
+  }
+});
+el.tabla.addEventListener("pointermove", e => {     // si arrastra (scroll), cancela la pulsación larga
+  if (origenToque && Math.hypot(e.clientX - origenToque[0], e.clientY - origenToque[1]) > 8) clearTimeout(temporizadorLargo);
+});
+["pointerup", "pointercancel"].forEach(t => el.tabla.addEventListener(t, () => { clearTimeout(temporizadorLargo); origenToque = null; }));
+
+el.tabla.addEventListener("click", e => {
+  const i = indiceDe(e); if (i < 0) return;
+  if (anularClic) { anularClic = false; return; }
+  marcarSeleccion(i, false);
+  accionRevelar(i);
+});
+
+// Clic derecho = bandera. El menú contextual solo se anula dentro del tablero.
+el.tabla.addEventListener("contextmenu", e => {
+  const i = indiceDe(e); if (i < 0) return;
+  e.preventDefault();
+  if (ultimoPuntero === "touch") return;            // en móvil lo gestiona la pulsación larga
+  marcarSeleccion(i, false);
+  accionBandera(i);
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") {                         // botón de pánico: instantáneo
+    e.preventDefault();
+    vista === "juego" ? mostrarVista(PANICO) : volverAlJuego();
+    return;
+  }
+  if (vista !== "juego" || e.target.closest("button, input")) return;
+  const p = partida, x = seleccion % p.ancho, y = (seleccion / p.ancho) | 0;
+  const mover = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+  if (mover) {
+    e.preventDefault();
+    const nx = Math.min(p.ancho - 1, Math.max(0, x + mover[0]));
+    const ny = Math.min(p.alto - 1, Math.max(0, y + mover[1]));
+    marcarSeleccion(ny * p.ancho + nx);
+  } else if (e.key === "Enter") { e.preventDefault(); accionRevelar(seleccion); }
+  else if (e.key === " ") { e.preventDefault(); accionBandera(seleccion); }
+});
+
+$("btnRecalc").addEventListener("click", () => {
+  vista = "juego"; ocultarVistas();
+  nuevaPartida(nivelActual);
+  marcarPestana();
+  el.wrap.focus();
+});
+
+el.idioma.addEventListener("click", () => aplicarIdioma(idioma === "es" ? "en" : "es"));
+
+// Refresco del cronómetro (solo texto, barato)
+setInterval(() => { if (partida && partida.inicio) pintarEstado(); }, 250);
+
+/* ===== Arranque ===== */
+// Idioma inicial: #en o #es en la URL; si no, el del navegador
+const pedido = location.hash.slice(1).toLowerCase();
+const inicial = TEXTOS[pedido] ? pedido : ((navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en");
+construirPestanas();
+aplicarIdioma(inicial);
+nuevaPartida("resumen");
+marcarPestana();
+</script>
+</body>
+</html>

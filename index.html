@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<title>Portal del empleado</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Intranet corporativa: aplicaciones internas, comunicados y accesos directos.">
+<meta property="og:title" content="Portal del empleado">
+<meta property="og:description" content="Intranet corporativa: aplicaciones internas, comunicados y accesos directos.">
+<meta property="og:url" content="https://corporativo.recursosvidafacil.com">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='1' width='14' height='14' rx='3' fill='%23466b8c'/%3E%3Cg fill='%23fff'%3E%3Crect x='4' y='4' width='3' height='3'/%3E%3Crect x='9' y='4' width='3' height='3'/%3E%3Crect x='4' y='9' width='3' height='3'/%3E%3Crect x='9' y='9' width='3' height='3'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+  /* ===== Tokens: misma paleta sobria que las aplicaciones de la suite ===== */
+  :root {
+    --bg: #f4f5f7;
+    --surface: #ffffff;
+    --line: #dde0e5;
+    --ink: #1f2328;
+    --ink-2: #5a6270;
+    --ink-3: #8a919c;
+    --accent: #466b8c;          /* azul pizarra apagado */
+    --accent-soft: #e3ebf2;
+    --ok-bg: #e2efe6; --ok: #2d6140;
+    --wait-bg: #eceef1; --wait: #50575f;
+    --font: Calibri, "Segoe UI", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 14px/1.45 var(--font); }
+
+  /* ===== Cabecera ===== */
+  .top {
+    display: flex; align-items: center; gap: 12px; padding: 8px 16px;
+    background: var(--accent); color: #fff;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; white-space: nowrap; }
+  .brand svg { width: 20px; height: 20px; flex: none; }
+  .search {
+    flex: 1; max-width: 420px; margin-left: auto; min-width: 0;
+    display: flex; align-items: center; gap: 6px; padding: 5px 10px;
+    background: rgba(255,255,255,.14); border-radius: 4px; color: rgba(255,255,255,.85);
+  }
+  .search input {
+    flex: 1; min-width: 0; border: 0; background: transparent; color: #fff; font: inherit; outline: none;
+  }
+  .search input::placeholder { color: rgba(255,255,255,.75); }
+  .search svg { width: 14px; height: 14px; flex: none; }
+  /* Selector de idioma: dos opciones visibles, la activa resaltada */
+  .idioma { display: inline-flex; border: 1px solid rgba(255,255,255,.4); border-radius: 4px; overflow: hidden; flex: none; }
+  .idioma button {
+    border: 0; background: transparent; color: rgba(255,255,255,.85); font: inherit; font-size: 12px; font-weight: 700;
+    padding: 4px 9px; cursor: pointer; letter-spacing: .04em;
+  }
+  .idioma button + button { border-left: 1px solid rgba(255,255,255,.4); }
+  .idioma button:hover { background: rgba(255,255,255,.12); }
+  .idioma button[aria-pressed="true"] { background: #fff; color: var(--accent); }
+  .idioma button:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: #dfe7ee; color: var(--accent);
+    display: grid; place-items: center; font-size: 12px; font-weight: 700; flex: none;
+  }
+
+  /* ===== Subnavegación decorativa ===== */
+  .subnav {
+    display: flex; gap: 4px; padding: 0 16px; background: var(--surface); border-bottom: 1px solid var(--line);
+    overflow-x: auto; scrollbar-width: none; white-space: nowrap;
+  }
+  .subnav::-webkit-scrollbar { display: none; }
+  .subnav span { padding: 9px 10px; color: var(--ink-2); cursor: default; }
+  .subnav span.on { color: var(--accent); font-weight: 700; box-shadow: inset 0 -2px 0 var(--accent); }
+
+  /* ===== Contenido ===== */
+  .wrap {
+    max-width: 1180px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 32px;
+    display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px;
+  }
+  .hello h1 { margin: 0; font-size: 22px; font-weight: 700; text-wrap: balance; }
+  .hello p { margin: 2px 0 0; color: var(--ink-2); }
+  .sec-title {
+    margin: 22px 0 10px; font-size: 12px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+
+  /* Tarjetas de aplicación */
+  .apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+  .app {
+    display: grid; grid-template-columns: 40px 1fr; grid-template-rows: auto 1fr auto; column-gap: 12px; row-gap: 4px;
+    padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    color: inherit; text-decoration: none; min-height: 132px;
+  }
+  a.app:hover { border-color: #b9c4d0; box-shadow: 0 1px 4px rgba(20, 30, 45, .08); }
+  a.app:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .app[aria-disabled="true"] { cursor: default; }
+  .app[aria-disabled="true"] .ico { filter: grayscale(1); opacity: .7; }
+  .ico {
+    grid-row: 1 / span 3; width: 40px; height: 40px; border-radius: 6px; background: var(--accent-soft);
+    display: grid; place-items: center; color: var(--accent);
+  }
+  .ico svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .app h3 { margin: 0; font-size: 15px; font-weight: 700; }
+  .app p { margin: 0; color: var(--ink-2); font-size: 13px; }
+  .meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+  .chip { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; line-height: 16px; white-space: nowrap; }
+  .chip.ok { background: var(--ok-bg); color: var(--ok); }
+  .chip.wait { background: var(--wait-bg); color: var(--wait); }
+  .ver { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+  /* Columna lateral */
+  .side { display: flex; flex-direction: column; gap: 16px; padding-top: 4px; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; }
+  .panel h2 { margin: 0 0 8px; font-size: 13px; font-weight: 700; }
+  .news { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .news time { display: block; font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .news span { font-size: 13px; }
+  .links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .links li { font-size: 13px; color: var(--accent); cursor: default; }
+
+  footer { max-width: 1180px; margin: 0 auto; padding-inline: 16px; padding-block: 0 24px; color: var(--ink-3); font-size: 12px; }
+
+  @media (max-width: 860px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 520px) {
+    .search { display: none; }
+    .brand .long { display: none; }
+    .top { justify-content: space-between; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="brand">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="1" y="1" width="18" height="18" rx="4" fill="#fff" opacity=".18"/><g fill="#fff"><rect x="5" y="5" width="4" height="4"/><rect x="11" y="5" width="4" height="4"/><rect x="5" y="11" width="4" height="4"/><rect x="11" y="11" width="4" height="4"/></g></svg>
+    <span>Intranet</span><span class="long" data-t="marca"></span>
+  </span>
+  <label class="search">
+    <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+    <input id="buscar" type="search" autocomplete="off">
+  </label>
+  <div class="idioma" role="group" id="grupoIdioma">
+    <button type="button" data-lang="es" lang="es" title="Español">ES</button>
+    <button type="button" data-lang="en" lang="en" title="English">EN</button>
+  </div>
+  <span class="avatar" aria-hidden="true">LF</span>
+</header>
+
+<nav class="subnav" id="subnav"></nav>
+
+<div class="wrap">
+  <main>
+    <section class="hello">
+      <h1 id="saludo"></h1>
+      <p id="fecha"></p>
+    </section>
+
+    <h2 class="sec-title" data-t="tituloApps"></h2>
+    <div class="apps" id="apps"></div>
+  </main>
+
+  <aside class="side">
+    <section class="panel">
+      <h2 data-t="tituloNoticias"></h2>
+      <ul class="news" id="noticias"></ul>
+    </section>
+    <section class="panel">
+      <h2 data-t="tituloAccesos"></h2>
+      <ul class="links" id="accesos"></ul>
+    </section>
+  </aside>
+</div>
+
+<footer data-t="pie"></footer>
+
+<script>
+/* =====================================================================
+   CONFIGURACIÓN: aplicaciones del portal
+   Para activar una aplicación nueva: sube su fichero a /apps y pon disponible: true
+   ===================================================================== */
+const APPS = [
+  { id: "incidencias",   fichero: "apps/incidencias.html",   disponible: true,  version: "3.2", icono: "tabla" },
+  { id: "tareas",        fichero: "apps/tareas.html",        disponible: false, version: "—",   icono: "kanban" },
+  { id: "presupuestos",  fichero: "apps/presupuestos.html",  disponible: false, version: "—",   icono: "euro" },
+  { id: "consolidacion", fichero: "apps/consolidacion.html", disponible: false, version: "—",   icono: "capas" },
+  { id: "conciliacion",  fichero: "apps/conciliacion.html",  disponible: false, version: "—",   icono: "enlace" },
+  { id: "turnos",        fichero: "apps/turnos.html",        disponible: false, version: "—",   icono: "calendario" },
+];
+
+// Iconos SVG en línea (trazos simples, sin marcas)
+const ICONOS = {
+  tabla: '<rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18M3 14h18M9 4v16M15 4v16"/>',
+  kanban: '<rect x="3" y="4" width="5" height="14" rx="1"/><rect x="10" y="4" width="5" height="9" rx="1"/><rect x="17" y="4" width="4" height="11" rx="1"/>',
+  euro: '<path d="M17 6.5A7 7 0 1 0 17 17.5"/><path d="M4 10h9M4 14h9"/>',
+  capas: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+  enlace: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  calendario: '<rect x="3" y="5" width="18" height="16" rx="1.5"/><path d="M3 10h18M8 3v4M16 3v4M7 14h2M11 14h2M15 14h2M7 17h2M11 17h2"/>',
+};
+
+/* ---------- Textos en español e inglés (mismas claves en ambos) ---------- */
+const TEXTOS = {
+  es: {
+    titulo: "Portal del empleado",
+    tipIdioma: "Idioma",
+    marca: "· Portal del empleado",
+    buscar: "Buscar personas, documentos o aplicaciones",
+    subnav: ["Inicio", "Mi área", "Documentación", "Formación", "Soporte TI"],
+    saludo: ["Buenos días", "Buenas tardes", "Buenas noches"],
+    tituloApps: "Aplicaciones",
+    tituloNoticias: "Comunicados",
+    tituloAccesos: "Accesos directos",
+    disponible: "Disponible",
+    enImplantacion: "En implantación",
+    version: "v",
+    apps: {
+      incidencias:   ["Control de incidencias", "Hoja de seguimiento de incidencias por rango y periodo."],
+      tareas:        ["Tablero de tareas", "Priorización y cierre de tickets por departamento."],
+      presupuestos:  ["Aprobación de presupuestos", "Alta de partidas y validación frente a límite de gasto."],
+      consolidacion: ["Consolidación de partidas", "Agrupación de importes equivalentes en la matriz de costes."],
+      conciliacion:  ["Conciliación bancaria", "Emparejado de movimientos con sus apuntes contables."],
+      turnos:        ["Planificación de turnos", "Asignación semanal de turnos sin solapamientos."],
+    },
+    noticias: [
+      ["2026-09-22", "Cierre contable de septiembre: calendario de entregas"],
+      ["2026-09-18", "Actualizada la política de viajes y gastos"],
+      ["2026-09-15", "Mantenimiento programado del sistema de nóminas el sábado 27"],
+      ["2026-09-10", "Nuevo procedimiento de solicitud de vacaciones"],
+    ],
+    accesos: ["Solicitud de vacaciones", "Hoja de horas", "Nóminas y certificados", "Directorio", "Centro de ayuda TI"],
+    pie: "Intranet corporativa · v4.2.1 · Uso interno",
+    locale: "es-ES",
+  },
+  en: {
+    titulo: "Employee portal",
+    tipIdioma: "Language",
+    marca: "· Employee portal",
+    buscar: "Search people, documents or apps",
+    subnav: ["Home", "My area", "Documents", "Training", "IT support"],
+    saludo: ["Good morning", "Good afternoon", "Good evening"],
+    tituloApps: "Applications",
+    tituloNoticias: "Announcements",
+    tituloAccesos: "Shortcuts",
+    disponible: "Available",
+    enImplantacion: "Rolling out",
+    version: "v",
+    apps: {
+      incidencias:   ["Issue log", "Issue tracking sheet by range and period."],
+      tareas:        ["Task board", "Ticket prioritisation and close-out by department."],
+      presupuestos:  ["Budget approval", "Line-item entry and validation against the spend limit."],
+      consolidacion: ["Line-item consolidation", "Grouping of matching amounts in the cost matrix."],
+      conciliacion:  ["Bank reconciliation", "Matching transactions with their ledger entries."],
+      turnos:        ["Shift planning", "Weekly shift assignment with no overlaps."],
+    },
+    noticias: [
+      ["2026-09-22", "September month-end close: submission calendar"],
+      ["2026-09-18", "Travel and expenses policy updated"],
+      ["2026-09-15", "Scheduled payroll system maintenance on Saturday 27th"],
+      ["2026-09-10", "New holiday request procedure"],
+    ],
+    accesos: ["Holiday request", "Timesheet", "Payslips and certificates", "Directory", "IT help centre"],
+    pie: "Corporate intranet · v4.2.1 · Internal use",
+    locale: "en-GB",
+  },
+};
+
+/* =====================================================================
+   RENDERIZADO
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+let idioma = "es", T = TEXTOS.es;
+
+function pintarApps() {
+  $("apps").innerHTML = APPS.map(a => {
+    const [nombre, desc] = T.apps[a.id];
+    const icono = `<span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONOS[a.icono]}</svg></span>`;
+    const estado = a.disponible
+      ? `<span class="chip ok">${T.disponible}</span><span class="ver">${T.version}${a.version}</span>`
+      : `<span class="chip wait">${T.enImplantacion}</span>`;
+    const cuerpo = `${icono}<h3>${nombre}</h3><p>${desc}</p><div class="meta">${estado}</div>`;
+    // El idioma viaja en el enlace (#es / #en): así la aplicación abre en el mismo idioma
+    return a.disponible
+      ? `<a class="app" href="${a.fichero}#${idioma}">${cuerpo}</a>`
+      : `<div class="app" aria-disabled="true">${cuerpo}</div>`;
+  }).join("");
+}
+
+function pintarFecha() {
+  const ahora = new Date(), h = ahora.getHours();
+  $("saludo").textContent = T.saludo[h < 13 ? 0 : h < 20 ? 1 : 2];
+  const f = ahora.toLocaleDateString(T.locale, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  $("fecha").textContent = f.charAt(0).toUpperCase() + f.slice(1);
+}
+
+function aplicarIdioma(nuevo) {
+  idioma = nuevo; T = TEXTOS[idioma];
+  document.documentElement.lang = idioma;
+  document.title = T.titulo;
+  document.querySelectorAll("[data-t]").forEach(n => { n.textContent = T[n.dataset.t]; });
+  $("buscar").placeholder = T.buscar;
+  $("buscar").setAttribute("aria-label", T.buscar);
+  // Marca la opción activa del selector de idioma
+  document.querySelectorAll(".idioma button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === idioma)));
+  $("grupoIdioma").setAttribute("aria-label", T.tipIdioma);
+  $("subnav").innerHTML = T.subnav.map((s, k) => `<span class="${k === 0 ? "on" : ""}">${s}</span>`).join("");
+  $("noticias").innerHTML = T.noticias.map(([d, t]) => {
+    const fecha = new Date(d + "T12:00:00").toLocaleDateString(T.locale, { day: "2-digit", month: "short" });
+    return `<li><time datetime="${d}">${fecha}</time><span>${t}</span></li>`;
+  }).join("");
+  $("accesos").innerHTML = T.accesos.map(a => `<li>${a}</li>`).join("");
+  pintarFecha();
+  pintarApps();
+}
+
+document.querySelectorAll(".idioma button").forEach(b => b.addEventListener("click", () => aplicarIdioma(b.dataset.lang)));
+
+/* ===== Arranque: idioma de la URL (#es / #en) o del navegador ===== */
+const pedido = location.hash.slice(1).toLowerCase();
+aplicarIdioma(TEXTOS[pedido] ? pedido : ((navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en"));
+</script>
+</body>
+</html>
