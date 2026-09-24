@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<title>Tablero de tareas · Sprint 42</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Tablero Kanban del proyecto Q4: priorización y cierre de tickets por departamento.">
+<meta property="og:title" content="Tablero de tareas · Sprint 42">
+<meta property="og:description" content="Tablero Kanban del proyecto Q4: priorización y cierre de tickets por departamento.">
+<meta property="og:url" content="https://corporativo.recursosvidafacil.com/apps/tareas.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='1' width='14' height='14' rx='2' fill='%23466b8c'/%3E%3Cg fill='%23fff'%3E%3Crect x='3' y='3' width='3' height='9' rx='.5'/%3E%3Crect x='7' y='3' width='3' height='6' rx='.5'/%3E%3Crect x='11' y='3' width='2.5' height='7.5' rx='.5'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+  /* ===== Tokens: misma paleta sobria de la suite ===== */
+  :root {
+    --chrome: #f3f4f6;
+    --chrome-2: #e8eaee;
+    --line: #d5d8de;
+    --bg: #eef0f3;              /* fondo del tablero */
+    --col-bg: #e4e7ec;          /* fondo de columna Kanban */
+    --ink: #1f2328;
+    --ink-2: #5a6270;
+    --ink-3: #8a919c;
+    --accent: #466b8c;
+    --accent-soft: #e3ebf2;
+    --warm: #ad5538; --warm-bg: #f6e4dd;   /* departamentos del grupo cálido */
+    --cool: #3a6690; --cool-bg: #e1eaf3;   /* departamentos del grupo frío */
+    --font: Calibri, "Segoe UI", Arial, sans-serif;
+    /* Geometría de las tarjetas (las usa también el JS vía calc) */
+    --cw: 124px;       /* ancho de tarjeta */
+    --ch: 80px;        /* alto de tarjeta */
+    --gap: 10px;
+    --off-down: 9px;   /* solape de tickets ocultos */
+    --off-up: 25px;    /* solape de tickets visibles (se ve la cabecera) */
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 13px/1.3 var(--font); overflow: hidden; }
+  .app { display: flex; flex-direction: column; height: 100%; min-width: 0; }
+
+  /* ===== Barra de título ===== */
+  .titlebar {
+    display: flex; align-items: center; gap: 10px; padding: 6px 12px;
+    background: var(--accent); color: #fff; white-space: nowrap; overflow: hidden;
+  }
+  .launcher { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 3px; color: #fff; flex: none; }
+  .launcher:hover { background: rgba(255,255,255,.15); }
+  .launcher:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+  .launcher svg { width: 14px; height: 14px; fill: currentColor; }
+  .titlebar .doc { font-weight: 600; }
+  .titlebar .sub { opacity: .8; font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+  .titlebar .spacer { flex: 1; }
+  .team { display: flex; flex: none; }
+  .team span {
+    width: 22px; height: 22px; border-radius: 50%; margin-left: -6px; border: 2px solid var(--accent);
+    display: grid; place-items: center; font-size: 9px; font-weight: 700; background: #dfe7ee; color: var(--accent);
+  }
+
+  /* ===== Barra de herramientas ===== */
+  .toolbar {
+    display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--chrome);
+    border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; white-space: nowrap;
+  }
+  .toolbar::-webkit-scrollbar { display: none; }
+  .btn {
+    flex: none; height: 28px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line); border-radius: 3px; background: #fff; color: var(--ink); font: inherit; cursor: pointer;
+  }
+  .btn:hover:not(:disabled) { background: var(--accent-soft); }
+  .btn:disabled { color: var(--ink-3); cursor: default; }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: #3d5f7e; }
+  .sep { flex: none; width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
+  .combo {
+    flex: none; height: 28px; padding: 0 8px; display: inline-flex; align-items: center; gap: 4px;
+    border: 1px solid var(--line); background: #fff; border-radius: 3px; color: var(--ink-2);
+  }
+  .combo::after { content: "▾"; font-size: 10px; color: var(--ink-3); margin-left: 4px; }
+  .combo b { color: var(--ink); font-weight: 600; }
+  .filtro {
+    flex: none; margin-left: auto; height: 28px; width: 190px; padding: 0 8px; border: 1px solid var(--line);
+    border-radius: 3px; font: inherit; background: #fff; color: var(--ink);
+  }
+
+  /* ===== Selector de vistas (Tablero / Informe / Guía) ===== */
+  .views { display: flex; gap: 2px; padding: 0 12px; background: #fff; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+  .views::-webkit-scrollbar { display: none; }
+  .view-tab {
+    flex: none; padding: 8px 12px; border: 0; background: transparent; color: var(--ink-2); font: inherit; cursor: pointer;
+  }
+  .view-tab[aria-selected="true"] { color: var(--accent); font-weight: 700; box-shadow: inset 0 -2px 0 var(--accent); }
+  .view-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  /* ===== Zona principal (scroll interno) ===== */
+  .main { flex: 1; min-height: 0; overflow: auto; position: relative; }
+
+  /* ===== Tablero ===== */
+  .board { padding: 14px 16px 24px; width: max-content; min-width: 100%; user-select: none; -webkit-user-select: none; }
+  /* Cada columna = tarjeta + 6px de relleno a cada lado */
+  .grid7 { display: grid; grid-template-columns: repeat(7, calc(var(--cw) + 12px)); column-gap: var(--gap); }
+  .toprow > div { padding: 0 6px; }
+  .toprow { margin-bottom: 14px; }
+  .slotlabel { font-size: 11px; color: var(--ink-3); margin-bottom: 4px; height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slot {
+    position: relative; width: var(--cw); height: var(--ch); border-radius: 4px;
+    border: 1px dashed #b9c0ca; background: rgba(255,255,255,.45);
+    display: grid; place-items: center; text-align: center; color: var(--ink-3); font-size: 12px;
+  }
+  button.slot { font: inherit; font-size: 12px; cursor: pointer; padding: 0; }
+  button.slot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .slot .card { left: -1px; top: -1px; text-align: left; }
+  .slot .count {
+    position: absolute; right: 6px; bottom: 5px; z-index: 2; font-size: 11px; font-weight: 700; color: var(--ink-2);
+    background: #fff; border-radius: 8px; padding: 0 6px; line-height: 16px; font-variant-numeric: tabular-nums;
+  }
+  .slot .tag { display: inline-block; margin-top: 4px; }
+
+  .col { background: var(--col-bg); border-radius: 6px; padding: 6px; min-height: 360px; }
+  .colhead { display: flex; justify-content: space-between; font-weight: 700; font-size: 12px; color: var(--ink-2); padding: 0 2px 6px; }
+  .colhead span { font-weight: 400; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .stack { position: relative; width: var(--cw); }
+  .col.over, .slot.over { box-shadow: inset 0 0 0 2px var(--accent); }
+
+  /* ===== Tarjeta de ticket ===== */
+  .card {
+    position: absolute; left: 0; width: var(--cw); height: var(--ch);
+    top: calc(var(--nd, 0) * var(--off-down) + var(--nu, 0) * var(--off-up));
+    background: #fff; border: 1px solid var(--line); border-left: 3px solid var(--tag); border-radius: 4px;
+    padding: 4px 6px 4px 6px; box-shadow: 0 1px 1px rgba(20, 30, 45, .06);
+    font-size: 12px; overflow: hidden;
+  }
+  .card.warm { --tag: var(--warm); --tag-bg: var(--warm-bg); }
+  .card.cool { --tag: var(--cool); --tag-bg: var(--cool-bg); }
+  .card[data-o] { cursor: grab; touch-action: none; }
+  .card[data-o]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; z-index: 5; }
+  .card .hd { display: flex; align-items: center; justify-content: space-between; gap: 4px; height: 16px; }
+  .card .id { font-weight: 700; font-size: 11px; color: var(--tag); letter-spacing: .02em; }
+  .card .pts {
+    min-width: 20px; height: 16px; padding: 0 5px; border-radius: 8px; background: var(--tag-bg); color: var(--ink);
+    font-weight: 700; font-size: 11px; line-height: 16px; text-align: center; font-variant-numeric: tabular-nums;
+  }
+  .card .tt {
+    margin-top: 4px; color: var(--ink-2); line-height: 1.25;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  /* Ticket oculto: esqueleto gris */
+  .card.down {
+    border-left-width: 1px; background: #f7f8fa;
+    background-image: linear-gradient(#e3e6eb, #e3e6eb), linear-gradient(#e3e6eb, #e3e6eb);
+    background-size: 46% 4px, 70% 4px; background-position: 7px 3px, 7px 30px; background-repeat: no-repeat;
+  }
+  .card.hide { visibility: hidden; }
+  .tag {
+    display: inline-block; padding: 0 6px; border-radius: 8px; font-size: 11px; font-weight: 700; line-height: 16px;
+  }
+  .tag.warm { background: var(--warm-bg); color: var(--warm); }
+  .tag.cool { background: var(--cool-bg); color: var(--cool); }
+  .ghost { position: fixed; left: 0; top: 0; z-index: 50; pointer-events: none; }
+  .ghost .card { position: fixed; box-shadow: 0 6px 16px rgba(20, 30, 45, .22); cursor: grabbing; }
+
+  /* ===== Vistas seguras: Informe y Guía ===== */
+  .page { padding: 18px 16px 32px; max-width: 1180px; }
+  .page h2 { margin: 0 0 2px; font-size: 18px; }
+  .page .muted { color: var(--ink-3); font-size: 12px; margin: 0 0 14px; }
+  .report { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .panel { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; min-width: 0; }
+  .panel h3 { margin: 0 0 8px; font-size: 13px; }
+  .tablewrap { overflow-x: auto; }
+  table.list { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  .list th, .list td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e6e8ec; white-space: nowrap; }
+  .list th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); font-weight: 700; }
+  .list td.num { text-align: right; }
+  .list td.wrap { white-space: normal; min-width: 260px; }
+  .pill { display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 11px; line-height: 15px; }
+  .pill.ok { background: #e2efe6; color: #2d6140; }
+  .pill.run { background: #e3ebf2; color: #2f5578; }
+  .pill.pend { background: #eceef1; color: #50575f; }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-2); margin-top: 6px; }
+  .legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--accent); vertical-align: middle; margin-right: 5px; }
+  .legend i.ideal { border-top: 2px dashed var(--ink-3); }
+  .demo { display: inline-flex; gap: 6px; align-items: center; }
+
+  /* ===== Barra de estado ===== */
+  .status {
+    display: flex; align-items: center; gap: 18px; padding: 3px 12px;
+    padding-bottom: calc(3px + env(safe-area-inset-bottom, 0px));
+    background: var(--chrome); border-top: 1px solid var(--line); color: var(--ink-2); font-size: 12px;
+    white-space: nowrap; overflow: hidden; font-variant-numeric: tabular-nums;
+  }
+  .status .spacer { flex: 1; }
+  #btnIdioma { border: 0; background: transparent; color: inherit; font: inherit; padding: 1px 4px; border-radius: 2px; cursor: pointer; }
+  #btnIdioma:hover { background: var(--chrome-2); }
+  #btnIdioma:focus-visible { outline: 2px solid var(--accent); }
+
+  .toast {
+    position: fixed; right: 16px; bottom: 44px; max-width: calc(100% - 32px); z-index: 60;
+    background: #fff; color: var(--ink); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+    box-shadow: 0 2px 8px rgba(20, 30, 45, .15); padding: 8px 12px;
+  }
+
+  @media (max-width: 900px) { .report { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 640px) {
+    :root { --cw: 92px; --ch: 74px; --gap: 8px; --off-up: 23px; }
+    .card .tt { font-size: 11px; }
+    .titlebar .sub, .team, .filtro, .combo, .toolbar .sep { display: none; }
+    .status { gap: 10px; }
+    .status .opt { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="titlebar">
+    <a class="launcher" id="lnkPortal" href="../index.html"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="2" cy="2" r="1.4"/><circle cx="7" cy="2" r="1.4"/><circle cx="12" cy="2" r="1.4"/><circle cx="2" cy="7" r="1.4"/><circle cx="7" cy="7" r="1.4"/><circle cx="12" cy="7" r="1.4"/><circle cx="2" cy="12" r="1.4"/><circle cx="7" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/></svg></a>
+    <span class="doc" data-t="app"></span>
+    <span class="sub" data-t="proyecto"></span>
+    <span class="spacer"></span>
+    <span class="team" aria-hidden="true"><span>AS</span><span>CN</span><span>RV</span><span>LF</span></span>
+  </header>
+
+  <div class="toolbar">
+    <button class="btn primary" id="btnNuevo" type="button">
+      <svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg><span data-t="nuevo"></span>
+    </button>
+    <button class="btn" id="btnDeshacer" type="button">
+      <svg viewBox="0 0 16 16"><path d="M5 4L2 7l3 3"/><path d="M2 7h7a4 4 0 010 8H7"/></svg><span data-t="deshacer"></span>
+    </button>
+    <span class="sep"></span>
+    <span class="combo"><span data-t="filtroDepto"></span> <b data-t="todos"></b></span>
+    <span class="combo"><span data-t="agrupar"></span> <b data-t="estado"></b></span>
+    <input class="filtro" id="filtro" type="search" autocomplete="off">
+  </div>
+
+  <nav class="views" role="tablist" id="views">
+    <button class="view-tab" type="button" role="tab" data-vista="tablero"></button>
+    <button class="view-tab" type="button" role="tab" data-vista="informe"></button>
+    <button class="view-tab" type="button" role="tab" data-vista="guia"></button>
+  </nav>
+
+  <main class="main" id="main">
+    <div class="board" id="board"></div>
+    <div class="page" id="vInforme" hidden></div>
+    <div class="page" id="vGuia" hidden></div>
+  </main>
+
+  <footer class="status">
+    <span class="opt" data-t="sincronizado"></span>
+    <span class="spacer"></span>
+    <span id="stCerrados"></span>
+    <span class="opt" id="stMovs"></span>
+    <span id="stTiempo"></span>
+    <button id="btnIdioma" type="button"></button>
+  </footer>
+  <div class="toast" id="toast" role="status" hidden></div>
+</div>
+
+<script>
+/* =====================================================================
+   CONSTANTES (textos, departamentos y datos de las vistas seguras)
+   ===================================================================== */
+const DURACION_TOAST = 4500;
+const PASO_AUTOCOMPLETAR_MS = 70;   // ritmo al cerrar el sprint automáticamente
+const UMBRAL_ARRASTRE = 6;          // píxeles antes de considerar que es arrastre y no clic
+
+// Palo -> departamento. Los palos 0 y 1 son del grupo cálido; 2 y 3, del frío (hacen de "rojo/negro")
+const GRUPO = ["warm", "warm", "cool", "cool"];
+
+const TEXTOS = {
+  es: {
+    nombreIdioma: "Español (España)", tipIdioma: "Idioma", portal: "Aplicaciones",
+    app: "Tablero de tareas", proyecto: "· Proyecto Q4 · Sprint 42",
+    nuevo: "Nuevo sprint", deshacer: "Deshacer",
+    filtroDepto: "Departamento:", todos: "Todos", agrupar: "Agrupar por:", estado: "Estado",
+    filtro: "Filtrar tickets…",
+    vistas: { tablero: "Tablero", informe: "Informe", guia: "Guía" },
+    sincronizado: "Sincronizado",
+    cerrados: n => `Tickets cerrados: ${n}/52`,
+    movs: n => `Movimientos: ${n}`,
+    tiempo: "Tiempo en sprint: ",
+    backlog: "Backlog", revision: "En revisión", hecho: "Hecho", reabrir: "Reabrir backlog", vacio: "Sin tickets",
+    columnas: ["Por hacer", "Análisis", "Diseño", "Desarrollo", "Pruebas", "Validación", "Despliegue"],
+    deptos: ["FIN", "LEG", "OPS", "SIS"],
+    nombresDepto: ["Finanzas", "Legal", "Operaciones", "Sistemas"],
+    titulos: [
+      ["Revisar facturas pendientes", "Conciliar gastos de viaje", "Cerrar provisión mensual", "Actualizar previsión de caja", "Validar pedido de compra", "Informe de desviaciones", "Revisar IVA trimestral"],
+      ["Revisar cláusula de penalización", "Firmar NDA con proveedor", "Actualizar condiciones generales", "Revisar avales y garantías", "Registrar contrato marco", "Consulta sobre subcontratación", "Revisar poder de firma"],
+      ["Planificar entrega parcial", "Actualizar cronograma", "Revisar capacidad de almacén", "Coordinar transporte", "Inspección de calidad", "Informe semanal de avance", "Preparar reunión de arranque"],
+      ["Renovar licencias", "Alta de usuario nuevo", "Migrar carpeta compartida", "Revisar copias de seguridad", "Actualizar cliente VPN", "Configurar impresora planta 2", "Restablecer permisos"],
+    ],
+    victoria: "Sprint cerrado: todos los tickets completados.",
+    pts: "pts",
+    informe: {
+      titulo: "Informe del sprint 42",
+      sub: "Proyecto Q4 · Actualizado automáticamente",
+      tabla: "Tickets en curso",
+      cab: ["ID", "Ticket", "Depto.", "Estado", "Puntos", "Responsable"],
+      estados: { ok: "Cerrado", run: "En curso", pend: "Por hacer" },
+      burndown: "Burndown (puntos pendientes)",
+      ideal: "Ideal", real: "Real", dia: "Día",
+    },
+    guia: {
+      titulo: "Guía de uso del tablero",
+      sub: "Procedimiento interno · Rev. 2",
+      cab: ["Concepto", "Acción", "Descripción"],
+      filas: [
+        ["Objetivo del sprint", "—", "Llevar los 52 tickets a las columnas «Hecho», una por departamento, en orden de puntos: de 1 a 13."],
+        ["Mover ticket", "Clic · Intro", "El ticket va solo al mejor destino disponible: primero «Hecho», después otra columna."],
+        ["Mover a mano", "Arrastrar", "Arrastra un ticket (y los que tenga debajo) hasta la columna que elijas."],
+        ["Encadenar tickets", "—", "En una columna, cada ticket debe tener 1 punto menos que el de encima y ser del otro grupo de departamentos (cálido ↔ frío)."],
+        ["Columna vacía", "—", "Solo un ticket de 13 puntos puede abrir una columna vacía."],
+        ["Backlog", "Clic en «Backlog»", "Pasa el siguiente ticket a «En revisión». Si se agota, «Reabrir backlog» lo recupera."],
+        ["Tickets ocultos", "—", "Se destapan al quedar libres en su columna."],
+        ["Deshacer", "Botón · Ctrl+Z", "Revierte el último movimiento."],
+        ["Vista de informe", "Esc", "Cambia al Informe y congela el tiempo. Esc de nuevo para volver."],
+        ["Idioma", "Barra de estado", "Pulse el indicador de idioma para alternar entre español e inglés."],
+      ],
+      grupos: "Grupos de departamentos",
+    },
+  },
+  en: {
+    nombreIdioma: "English (UK)", tipIdioma: "Language", portal: "Apps",
+    app: "Task board", proyecto: "· Q4 Project · Sprint 42",
+    nuevo: "New sprint", deshacer: "Undo",
+    filtroDepto: "Department:", todos: "All", agrupar: "Group by:", estado: "Status",
+    filtro: "Filter tickets…",
+    vistas: { tablero: "Board", informe: "Report", guia: "Guide" },
+    sincronizado: "Synced",
+    cerrados: n => `Closed tickets: ${n}/52`,
+    movs: n => `Moves: ${n}`,
+    tiempo: "Sprint time: ",
+    backlog: "Backlog", revision: "In review", hecho: "Done", reabrir: "Reopen backlog", vacio: "No tickets",
+    columnas: ["To do", "Analysis", "Design", "Build", "Testing", "Review", "Release"],
+    deptos: ["FIN", "LEG", "OPS", "IT"],
+    nombresDepto: ["Finance", "Legal", "Operations", "IT"],
+    titulos: [
+      ["Review outstanding invoices", "Reconcile travel expenses", "Close monthly accrual", "Update cash forecast", "Approve purchase order", "Variance report", "Review quarterly VAT"],
+      ["Review penalty clause", "Sign supplier NDA", "Update terms and conditions", "Review bonds and warranties", "Register framework contract", "Subcontracting query", "Review signing authority"],
+      ["Plan partial delivery", "Update schedule", "Review warehouse capacity", "Coordinate transport", "Quality inspection", "Weekly progress report", "Prepare kick-off meeting"],
+      ["Renew licences", "New user onboarding", "Migrate shared folder", "Check backups", "Update VPN client", "Set up 2nd floor printer", "Reset permissions"],
+    ],
+    victoria: "Sprint closed: all tickets completed.",
+    pts: "pts",
+    informe: {
+      titulo: "Sprint 42 report",
+      sub: "Q4 Project · Updated automatically",
+      tabla: "Open tickets",
+      cab: ["ID", "Ticket", "Dept.", "Status", "Points", "Owner"],
+      estados: { ok: "Closed", run: "In progress", pend: "To do" },
+      burndown: "Burndown (remaining points)",
+      ideal: "Ideal", real: "Actual", dia: "Day",
+    },
+    guia: {
+      titulo: "Board usage guide",
+      sub: "Internal procedure · Rev. 2",
+      cab: ["Item", "Action", "Description"],
+      filas: [
+        ["Sprint goal", "—", "Move all 52 tickets to the “Done” columns, one per department, in point order from 1 to 13."],
+        ["Move ticket", "Click · Enter", "The ticket goes to the best available destination: “Done” first, then another column."],
+        ["Move manually", "Drag", "Drag a ticket (and any tickets below it) to the column of your choice."],
+        ["Chaining tickets", "—", "In a column, each ticket must have 1 point less than the one above and belong to the other department group (warm ↔ cool)."],
+        ["Empty column", "—", "Only a 13-point ticket can open an empty column."],
+        ["Backlog", "Click “Backlog”", "Moves the next ticket to “In review”. When it runs out, “Reopen backlog” brings it back."],
+        ["Hidden tickets", "—", "They are revealed once they are free in their column."],
+        ["Undo", "Button · Ctrl+Z", "Reverts the last move."],
+        ["Report view", "Esc", "Switches to the Report and freezes the timer. Press Esc again to return."],
+        ["Language", "Status bar", "Click the language indicator to switch between Spanish and English."],
+      ],
+      grupos: "Department groups",
+    },
+  },
+};
+
+// Datos ficticios del Informe: [id, índice de depto., fila de título, estado, puntos, responsable]
+const DATOS_INFORME = [
+  ["FIN-112", 0, 2, "ok", 5, "L. Ferrer"], ["LEG-087", 1, 0, "run", 8, "M. Ortega"], ["OPS-141", 2, 1, "run", 3, "A. Soler"],
+  ["SIS-203", 3, 3, "ok", 2, "C. Navarro"], ["FIN-115", 0, 5, "run", 5, "R. Vidal"], ["OPS-144", 2, 4, "pend", 8, "J. Pastor"],
+  ["LEG-090", 1, 2, "pend", 3, "E. Molina"], ["SIS-207", 3, 0, "run", 1, "C. Navarro"], ["OPS-149", 2, 5, "pend", 5, "A. Soler"],
+  ["FIN-118", 0, 4, "pend", 2, "L. Ferrer"],
+];
+// Burndown: puntos pendientes reales por día (sprint de 14 días, vamos por el día 10)
+const BURNDOWN_REAL = [84, 81, 77, 76, 69, 64, 60, 52, 47, 43];
+const BURNDOWN_DIAS = 14;
+
+/* =====================================================================
+   LÓGICA DEL JUEGO (solitario Klondike, solo estado)
+   Carta = { s: palo 0-3, r: 1-13, up: visible }
+   Origen = { t:"w" } | { t:"f", i } | { t:"t", i, k }   (w = revisión, f = hecho, t = columna)
+   ===================================================================== */
+function repartir() {
+  const mazo = [];
+  for (let s = 0; s < 4; s++) for (let r = 1; r <= 13; r++) mazo.push({ s, r, up: false });
+  for (let i = mazo.length - 1; i > 0; i--) {            // barajado Fisher-Yates
+    const j = Math.floor(Math.random() * (i + 1));
+    [mazo[i], mazo[j]] = [mazo[j], mazo[i]];
+  }
+  const tab = [];
+  for (let i = 0; i < 7; i++) {
+    tab.push(mazo.splice(0, i + 1));
+    tab[i][i].up = true;                                  // solo la última de cada columna, visible
+  }
+  return { stock: mazo, waste: [], found: [[], [], [], []], tab, movs: 0 };
+}
+
+const grupo = c => GRUPO[c.s];
+const cima = pila => pila[pila.length - 1];
+
+function cartasDe(j, o) {
+  if (o.t === "w") return j.waste.length ? [cima(j.waste)] : [];
+  if (o.t === "f") return j.found[o.i].length ? [cima(j.found[o.i])] : [];
+  return j.tab[o.i].slice(o.k);
+}
+
+function puedeEnColumna(j, cartas, i) {
+  const dest = j.tab[i], primera = cartas[0];
+  if (!dest.length) return primera.r === 13;
+  const tope = cima(dest);
+  return tope.up && grupo(tope) !== grupo(primera) && tope.r === primera.r + 1;
+}
+function puedeEnHecho(j, cartas, f) {
+  return cartas.length === 1 && cartas[0].s === f && j.found[f].length === cartas[0].r - 1;
+}
+
+// Intenta mover; devuelve true si lo hizo
+function mover(j, o, d) {
+  const cartas = cartasDe(j, o);
+  if (!cartas.length || !cartas.every(c => c.up)) return false;
+  if (o.t === d.t && o.i === d.i) return false;
+  const valido = d.t === "f" ? puedeEnHecho(j, cartas, d.i) : puedeEnColumna(j, cartas, d.i);
+  if (!valido) return false;
+  if (o.t === "w") j.waste.pop();
+  else if (o.t === "f") j.found[o.i].pop();
+  else {
+    j.tab[o.i].splice(o.k);
+    const nuevaCima = cima(j.tab[o.i]);
+    if (nuevaCima) nuevaCima.up = true;                   // se destapa el ticket oculto
+  }
+  (d.t === "f" ? j.found[d.i] : j.tab[d.i]).push(...cartas);
+  j.movs++;
+  return true;
+}
+
+// Robar del backlog (o reciclar la revisión si el backlog está vacío)
+function robar(j) {
+  if (j.stock.length) {
+    const c = j.stock.pop(); c.up = true; j.waste.push(c);
+  } else if (j.waste.length) {
+    j.stock = j.waste.reverse().map(c => ({ ...c, up: false }));
+    j.waste = [];
+  } else return false;
+  j.movs++;
+  return true;
+}
+
+// Mejor destino automático para un clic: primero "Hecho", luego columnas
+function destinoAuto(j, o) {
+  const cartas = cartasDe(j, o);
+  if (!cartas.length || !cartas[0].up) return null;
+  if (cartas.length === 1 && o.t !== "f" && puedeEnHecho(j, cartas, cartas[0].s)) return { t: "f", i: cartas[0].s };
+  const opciones = [];
+  for (let i = 0; i < 7; i++) {
+    if (o.t === "t" && o.i === i) continue;
+    // No tiene sentido mover un 13 que ya está al fondo de su columna a otra vacía
+    if (!j.tab[i].length && o.t === "t" && o.k === 0) continue;
+    if (puedeEnColumna(j, cartas, i)) opciones.push(i);
+  }
+  // Preferimos columnas con tickets antes que columnas vacías
+  opciones.sort((a, b) => (j.tab[a].length ? 0 : 1) - (j.tab[b].length ? 0 : 1));
+  return opciones.length ? { t: "t", i: opciones[0] } : null;
+}
+
+const cerrados = j => j.found.reduce((s, f) => s + f.length, 0);
+const ganada = j => cerrados(j) === 52;
+const autocompletable = j => !j.stock.length && !j.waste.length && j.tab.every(col => col.every(c => c.up));
+
+function pasoAutocompletar(j) {
+  for (let i = 0; i < 7; i++) {
+    const c = cima(j.tab[i]);
+    if (c && mover(j, { t: "t", i, k: j.tab[i].length - 1 }, { t: "f", i: c.s })) return true;
+  }
+  return false;
+}
+
+/* ===== Cronómetro por tramos (se pausa en las vistas seguras) ===== */
+const crono = { ms: 0, inicio: 0, activo: false };
+function arrancar() { if (crono.activo && !crono.inicio) crono.inicio = performance.now(); }
+function parar() { if (crono.inicio) { crono.ms += performance.now() - crono.inicio; crono.inicio = 0; } }
+function transcurrido() { return crono.ms + (crono.inicio ? performance.now() - crono.inicio : 0); }
+
+/* =====================================================================
+   RENDERIZADO (DOM)
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+let idioma = "es", T = TEXTOS.es;
+let juego = repartir();
+let historial = [];            // instantáneas para deshacer
+let vista = "tablero";
+let ocupado = false;           // bloquea la entrada durante el autocompletado
+let terminado = false;
+
+function idTicket(c) { return `${T.deptos[c.s]}-${String(c.r).padStart(2, "0")}`; }
+function tituloTicket(c) { const l = T.titulos[c.s]; return l[(c.r * 5 + c.s) % l.length]; }
+
+function htmlCarta(c, o, nd, nu, foco) {
+  const pos = `style="--nd:${nd};--nu:${nu}"`;
+  if (!c.up) return `<div class="card down" ${pos}></div>`;
+  const datos = o ? ` data-o="${o}"${foco ? ' tabindex="0"' : ""}` : "";
+  return `<div class="card ${GRUPO[c.s]}" ${pos}${datos} aria-label="${idTicket(c)}, ${c.r} ${T.pts}. ${tituloTicket(c)}">
+    <div class="hd"><span class="id">${idTicket(c)}</span><span class="pts">${c.r}</span></div>
+    <div class="tt">${tituloTicket(c)}</div></div>`;
+}
+
+function render() {
+  const j = juego, h = [];
+  // Fila superior: backlog, revisión, hueco y las 4 columnas "Hecho"
+  h.push('<div class="grid7 toprow">');
+  h.push(`<div><div class="slotlabel">${T.backlog}</div>
+    <button class="slot" id="btnBacklog" type="button">${j.stock.length
+      ? htmlCarta({ up: false }, null, 0, 0) + `<span class="count">${j.stock.length}</span>`
+      : (j.waste.length ? "↻ " + T.reabrir : T.vacio)}</button></div>`);
+  const w = cima(j.waste);
+  h.push(`<div><div class="slotlabel">${T.revision}</div><div class="slot">${w ? htmlCarta(w, "w", 0, 0, true) : ""}${j.waste.length ? `<span class="count">${j.waste.length}</span>` : ""}</div></div>`);
+  h.push("<div></div>");
+  for (let f = 0; f < 4; f++) {
+    const c = cima(j.found[f]);
+    h.push(`<div><div class="slotlabel">${T.hecho} · ${T.nombresDepto[f]}</div>
+      <div class="slot" data-drop="f${f}">${c ? htmlCarta(c, "f" + f, 0, 0, true) : `<span><span class="tag ${GRUPO[f]}">${T.deptos[f]}</span></span>`}
+      ${c ? `<span class="count">${j.found[f].length}/13</span>` : ""}</div></div>`);
+  }
+  h.push("</div>");
+  // Columnas Kanban
+  h.push('<div class="grid7">');
+  for (let i = 0; i < 7; i++) {
+    const col = j.tab[i];
+    let nd = 0, nu = 0;
+    const cartas = col.map((c, k) => {
+      const html = htmlCarta(c, c.up ? `t${i}.${k}` : null, nd, nu, c.up);
+      c.up ? nu++ : nd++;
+      return html;
+    });
+    // Altura de la pila = desplazamiento de la última + alto de tarjeta
+    const ult = col.length ? `calc(${nd - (cima(col).up ? 0 : 1)} * var(--off-down) + ${nu - (cima(col).up ? 1 : 0)} * var(--off-up) + var(--ch))` : "var(--ch)";
+    h.push(`<div class="col" data-drop="t${i}"><div class="colhead">${T.columnas[i]}<span>${col.length}</span></div>
+      <div class="stack" style="height:${ult}">${cartas.join("")}</div></div>`);
+  }
+  h.push("</div>");
+  $("board").innerHTML = h.join("");
+  $("btnBacklog").setAttribute("aria-label", `${T.backlog}: ${j.stock.length}`);
+  pintarEstado();
+  $("btnDeshacer").disabled = !historial.length || ocupado;
+}
+
+function pintarEstado() {
+  $("stCerrados").textContent = T.cerrados(cerrados(juego));
+  $("stMovs").textContent = T.movs(juego.movs);
+  const s = Math.floor(transcurrido() / 1000);
+  $("stTiempo").textContent = T.tiempo + String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+}
+
+let temporizadorToast = 0, toastClave = null;
+function toast(clave) {
+  toastClave = clave;
+  $("toast").textContent = T[clave]; $("toast").hidden = false;
+  clearTimeout(temporizadorToast);
+  temporizadorToast = setTimeout(() => { $("toast").hidden = true; }, DURACION_TOAST);
+}
+
+/* ===== Acciones ===== */
+function parsearOrigen(txt) {
+  if (txt === "w") return { t: "w" };
+  if (txt[0] === "f") return { t: "f", i: +txt.slice(1) };
+  const [i, k] = txt.slice(1).split(".").map(Number);
+  return { t: "t", i, k };
+}
+function parsearDestino(txt) { return { t: txt[0], i: +txt.slice(1) }; }
+
+// Envuelve cualquier cambio: guarda instantánea, arranca crono y comprueba el final
+function accion(fn) {
+  if (ocupado || terminado) return false;
+  const antes = JSON.stringify(juego);
+  if (!fn(juego)) return false;
+  historial.push(antes);
+  if (!crono.activo) { crono.activo = true; arrancar(); }
+  render();
+  comprobarFinal();
+  return true;
+}
+
+function comprobarFinal() {
+  if (ganada(juego)) return finalizar();
+  if (autocompletable(juego)) {
+    ocupado = true;
+    const paso = () => {
+      if (pasoAutocompletar(juego)) { render(); setTimeout(paso, PASO_AUTOCOMPLETAR_MS); }
+      else { ocupado = false; render(); if (ganada(juego)) finalizar(); }
+    };
+    setTimeout(paso, PASO_AUTOCOMPLETAR_MS);
+  }
+}
+function finalizar() { terminado = true; parar(); crono.activo = false; render(); toast("victoria"); }
+
+function nuevoSprint() {
+  juego = repartir(); historial = []; terminado = false; ocupado = false;
+  crono.ms = 0; crono.inicio = 0; crono.activo = false;
+  $("toast").hidden = true;
+  render();
+}
+
+function deshacer() {
+  if (ocupado || !historial.length) return;
+  juego = JSON.parse(historial.pop());
+  terminado = false;
+  if (crono.activo) arrancar();
+  render();
+}
+
+/* ===== Arrastrar y soltar (ratón y táctil con Pointer Events) ===== */
+let arr = null;   // { o, x, y, id, fantasma, originales, activo }
+
+$("board").addEventListener("pointerdown", e => {
+  if (ocupado || terminado || e.button > 0) return;
+  const el = e.target.closest(".card[data-o]");
+  if (!el) return;
+  arr = { o: el.dataset.o, x: e.clientX, y: e.clientY, id: e.pointerId, activo: false };
+});
+
+document.addEventListener("pointermove", e => {
+  if (!arr || e.pointerId !== arr.id) return;
+  const dx = e.clientX - arr.x, dy = e.clientY - arr.y;
+  if (!arr.activo) {
+    if (Math.hypot(dx, dy) < UMBRAL_ARRASTRE) return;
+    iniciarArrastre();
+  }
+  arr.fantasma.style.transform = `translate(${dx}px, ${dy}px)`;
+  marcarDestino(e.clientX, e.clientY);
+});
+
+function iniciarArrastre() {
+  const o = parsearOrigen(arr.o);
+  const board = $("board");
+  // Elementos que viajan: en una columna, el ticket y todos los de debajo
+  arr.originales = o.t === "t"
+    ? [...board.querySelectorAll(`.col[data-drop="t${o.i}"] .card`)].slice(o.k)
+    : [board.querySelector(`.card[data-o="${arr.o}"]`)];
+  arr.fantasma = document.createElement("div");
+  arr.fantasma.className = "ghost";
+  for (const el of arr.originales) {
+    const r = el.getBoundingClientRect(), copia = el.cloneNode(true);
+    copia.style.left = r.left + "px"; copia.style.top = r.top + "px";
+    arr.fantasma.appendChild(copia);
+    el.classList.add("hide");
+  }
+  document.body.appendChild(arr.fantasma);
+  arr.activo = true;
+}
+
+let destinoMarcado = null;
+function destinoEn(x, y) {
+  const el = document.elementFromPoint(x, y);
+  return el ? el.closest("[data-drop]") : null;
+}
+function marcarDestino(x, y) {
+  const d = destinoEn(x, y);
+  if (d === destinoMarcado) return;
+  destinoMarcado?.classList.remove("over");
+  destinoMarcado = d; d?.classList.add("over");
+}
+
+document.addEventListener("pointerup", e => {
+  if (!arr || e.pointerId !== arr.id) return;
+  const o = parsearOrigen(arr.o);
+  if (arr.activo) {
+    const d = destinoEn(e.clientX, e.clientY);
+    arr.fantasma.remove();
+    destinoMarcado?.classList.remove("over"); destinoMarcado = null;
+    arr = null;
+    if (!(d && accion(j => mover(j, o, parsearDestino(d.dataset.drop))))) render();   // si no vale, vuelve a su sitio
+  } else {
+    arr = null;
+    moverAuto(o);                                          // clic simple = movimiento automático
+  }
+});
+document.addEventListener("pointercancel", () => {
+  if (arr?.fantasma) arr.fantasma.remove();
+  arr = null; render();
+});
+
+function moverAuto(o) {
+  const d = destinoAuto(juego, o);
+  if (d) accion(j => mover(j, o, d));
+}
+
+// Backlog (delegado porque el botón se regenera en cada render)
+$("board").addEventListener("click", e => {
+  if (e.target.closest("#btnBacklog")) accion(robar);
+});
+
+/* ===== Vistas: Tablero / Informe (pánico) / Guía ===== */
+function mostrarVista(v) {
+  if (v === vista) return;
+  if (vista === "tablero") parar();
+  vista = v;
+  $("board").hidden = v !== "tablero";
+  $("vInforme").hidden = v !== "informe";
+  $("vGuia").hidden = v !== "guia";
+  $("main").scrollTo(0, 0);
+  $("toast").hidden = true;
+  if (v === "tablero" && crono.activo) arrancar();
+  document.querySelectorAll(".view-tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.vista === v)));
+  pintarEstado();
+}
+
+function construirInforme() {
+  const I = T.informe;
+  const filas = DATOS_INFORME.map(([id, d, t, est, p, resp]) => {
+    const codigo = T.deptos[d] + id.slice(3);
+    return `<tr><td>${codigo}</td><td>${T.titulos[d][t]}</td><td><span class="tag ${GRUPO[d]}">${T.deptos[d]}</span></td>
+      <td><span class="pill ${est}">${I.estados[est]}</span></td><td class="num">${p}</td><td>${resp}</td></tr>`;
+  }).join("");
+  $("vInforme").innerHTML = `<h2>${I.titulo}</h2><p class="muted">${I.sub}</p>
+    <div class="report">
+      <section class="panel"><h3>${I.tabla}</h3><div class="tablewrap"><table class="list">
+        <thead><tr>${I.cab.map((c, k) => `<th${k === 4 ? ' style="text-align:right"' : ""}>${c}</th>`).join("")}</tr></thead>
+        <tbody>${filas}</tbody></table></div></section>
+      <section class="panel"><h3>${I.burndown}</h3>${graficoBurndown()}
+        <div class="legend"><span><i class="ideal"></i>${I.ideal}</span><span><i></i>${I.real}</span></div></section>
+    </div>`;
+}
+
+// Burndown: una sola escala (puntos) y dos series: ideal (discontinua) y real
+function graficoBurndown() {
+  const W = 420, H = 230, iz = 34, de = 44, su = 10, ab = 28;
+  const max = 90, x = d => iz + (d - 1) / (BURNDOWN_DIAS - 1) * (W - iz - de), y = v => su + (1 - v / max) * (H - su - ab);
+  const s = [`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${T.informe.burndown}" font-family="Calibri, Segoe UI, Arial, sans-serif" font-size="11">`];
+  for (const v of [0, 30, 60, 90]) {
+    s.push(`<line x1="${iz}" x2="${W - de}" y1="${y(v)}" y2="${y(v)}" stroke="#e6e8ec"/>`);
+    s.push(`<text x="${iz - 6}" y="${y(v) + 4}" text-anchor="end" fill="#8a919c">${v}</text>`);
+  }
+  for (const d of [1, 4, 7, 10, 14]) s.push(`<text x="${x(d)}" y="${H - 10}" text-anchor="middle" fill="#8a919c">${T.informe.dia} ${d}</text>`);
+  const inicio = BURNDOWN_REAL[0];
+  s.push(`<line x1="${x(1)}" y1="${y(inicio)}" x2="${x(BURNDOWN_DIAS)}" y2="${y(0)}" stroke="#8a919c" stroke-width="2" stroke-dasharray="5 4"/>`);
+  const pts = BURNDOWN_REAL.map((v, k) => `${x(k + 1)},${y(v)}`).join(" ");
+  s.push(`<polyline points="${pts}" fill="none" stroke="#466b8c" stroke-width="2" stroke-linejoin="round"/>`);
+  BURNDOWN_REAL.forEach((v, k) => s.push(`<circle cx="${x(k + 1)}" cy="${y(v)}" r="${k === BURNDOWN_REAL.length - 1 ? 4 : 2.5}" fill="#466b8c" stroke="#fff" stroke-width="1.5"><title>${T.informe.dia} ${k + 1}: ${v}</title></circle>`));
+  const ult = BURNDOWN_REAL.length, vUlt = BURNDOWN_REAL[ult - 1];
+  s.push(`<text x="${x(ult) + 8}" y="${y(vUlt) + 4}" fill="#1f2328" font-weight="700">${vUlt}</text>`);
+  s.push("</svg>");
+  return s.join("");
+}
+
+function construirGuia() {
+  const G = T.guia;
+  const ejemplo = (s, r) => `<span class="tag ${GRUPO[s]}">${T.deptos[s]}</span>`;
+  $("vGuia").innerHTML = `<h2>${G.titulo}</h2><p class="muted">${G.sub}</p>
+    <section class="panel"><div class="tablewrap"><table class="list">
+      <thead><tr>${G.cab.map(c => `<th>${c}</th>`).join("")}</tr></thead>
+      <tbody>${G.filas.map(f => `<tr><td><b>${f[0]}</b></td><td>${f[1]}</td><td class="wrap">${f[2]}</td></tr>`).join("")}</tbody>
+    </table></div></section>
+    <section class="panel" style="margin-top:12px"><h3>${G.grupos}</h3>
+      <div class="demo">${ejemplo(0)} ${ejemplo(1)} <span style="margin:0 8px;color:var(--ink-3)">↔</span> ${ejemplo(2)} ${ejemplo(3)}</div>
+    </section>`;
+}
+
+/* ===== Idioma ===== */
+function aplicarIdioma(nuevo) {
+  idioma = nuevo; T = TEXTOS[idioma];
+  document.documentElement.lang = idioma;
+  document.title = `${T.app} · Sprint 42`;
+  document.querySelectorAll("[data-t]").forEach(n => { n.textContent = T[n.dataset.t]; });
+  document.querySelectorAll(".view-tab").forEach(b => { b.textContent = T.vistas[b.dataset.vista]; });
+  $("filtro").placeholder = T.filtro; $("filtro").setAttribute("aria-label", T.filtro);
+  $("btnIdioma").textContent = T.nombreIdioma; $("btnIdioma").title = T.tipIdioma;
+  $("lnkPortal").href = "../index.html#" + idioma;
+  $("lnkPortal").title = T.portal; $("lnkPortal").setAttribute("aria-label", T.portal);
+  if (!$("toast").hidden && toastClave) $("toast").textContent = T[toastClave];
+  construirInforme(); construirGuia(); render();
+}
+
+/* ===== Teclado ===== */
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") {                               // botón de pánico: instantáneo
+    e.preventDefault();
+    mostrarVista(vista === "tablero" ? "informe" : "tablero");
+    return;
+  }
+  if (vista !== "tablero") return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); deshacer(); return; }
+  const carta = e.target.closest?.(".card[data-o]");
+  if (carta && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); moverAuto(parsearOrigen(carta.dataset.o)); }
+});
+
+$("btnNuevo").addEventListener("click", nuevoSprint);
+$("btnDeshacer").addEventListener("click", deshacer);
+$("btnIdioma").addEventListener("click", () => aplicarIdioma(idioma === "es" ? "en" : "es"));
+document.querySelectorAll(".view-tab").forEach(b => b.addEventListener("click", () => mostrarVista(b.dataset.vista)));
+setInterval(() => { if (crono.inicio) pintarEstado(); }, 250);
+
+/* ===== Arranque ===== */
+const pedido = location.hash.slice(1).toLowerCase();
+aplicarIdioma(TEXTOS[pedido] ? pedido : ((navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en"));
+mostrarVista("tablero");
+document.querySelectorAll(".view-tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.vista === "tablero")));
+</script>
+</body>
+</html>
