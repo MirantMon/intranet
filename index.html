@@ -77,10 +77,18 @@
   }
   .hello h1 { margin: 0; font-size: 22px; font-weight: 700; text-wrap: balance; }
   .hello p { margin: 2px 0 0; color: var(--ink-2); }
+  .sec-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 22px 0 10px; }
   .sec-title {
-    margin: 22px 0 10px; font-size: 12px; font-weight: 700; letter-spacing: .06em;
+    margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .06em;
     text-transform: uppercase; color: var(--ink-3);
   }
+  /* Enlace discreto que muestra qué juego hay detrás de cada aplicación */
+  #btnGuia {
+    border: 0; background: transparent; padding: 2px 4px; font: inherit; font-size: 12px;
+    color: var(--accent); cursor: pointer; border-radius: 3px;
+  }
+  #btnGuia:hover { text-decoration: underline; }
+  #btnGuia:focus-visible { outline: 2px solid var(--accent); }
 
   /* Tarjetas de aplicación */
   .apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
@@ -105,6 +113,13 @@
   .chip.ok { background: var(--ok-bg); color: var(--ok); }
   .chip.wait { background: var(--wait-bg); color: var(--wait); }
   .ver { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .meta .izq { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  /* Pista del juego: oculta por defecto; aparece al pasar el ratón, con el foco o con la guía activada */
+  .juego {
+    font-size: 11px; line-height: 16px; padding: 0 7px; border-radius: 10px; white-space: nowrap;
+    border: 1px dashed #b9c4d0; color: var(--ink-2); visibility: hidden;
+  }
+  .app:hover .juego, .app:focus-visible .juego, body.pistas .juego { visibility: visible; }
 
   /* Columna lateral */
   .side { display: flex; flex-direction: column; gap: 16px; padding-top: 4px; }
@@ -154,7 +169,10 @@
       <p id="fecha"></p>
     </section>
 
-    <h2 class="sec-title" data-t="tituloApps"></h2>
+    <div class="sec-row">
+      <h2 class="sec-title" data-t="tituloApps"></h2>
+      <button id="btnGuia" type="button" aria-pressed="false"></button>
+    </div>
     <div class="apps" id="apps"></div>
   </main>
 
@@ -178,12 +196,12 @@
    Para activar una aplicación nueva: sube su fichero a /apps y pon disponible: true
    ===================================================================== */
 const APPS = [
-  { id: "incidencias",   fichero: "apps/incidencias.html",   disponible: true,  version: "3.2", icono: "tabla" },
-  { id: "tareas",        fichero: "apps/tareas.html",        disponible: false, version: "—",   icono: "kanban" },
-  { id: "presupuestos",  fichero: "apps/presupuestos.html",  disponible: false, version: "—",   icono: "euro" },
-  { id: "consolidacion", fichero: "apps/consolidacion.html", disponible: false, version: "—",   icono: "capas" },
-  { id: "conciliacion",  fichero: "apps/conciliacion.html",  disponible: false, version: "—",   icono: "enlace" },
-  { id: "turnos",        fichero: "apps/turnos.html",        disponible: false, version: "—",   icono: "calendario" },
+  { id: "incidencias",   fichero: "apps/incidencias.html",   disponible: true,  version: "3.2", icono: "tabla",      juego: "buscaminas" },
+  { id: "tareas",        fichero: "apps/tareas.html",        disponible: true,  version: "1.0", icono: "kanban",     juego: "solitario" },
+  { id: "presupuestos",  fichero: "apps/presupuestos.html",  disponible: false, version: "—",   icono: "euro",       juego: "blackjack" },
+  { id: "consolidacion", fichero: "apps/consolidacion.html", disponible: false, version: "—",   icono: "capas",      juego: "j2048" },
+  { id: "conciliacion",  fichero: "apps/conciliacion.html",  disponible: false, version: "—",   icono: "enlace",     juego: "parejas" },
+  { id: "turnos",        fichero: "apps/turnos.html",        disponible: false, version: "—",   icono: "calendario", juego: "sudoku" },
 ];
 
 // Iconos SVG en línea (trazos simples, sin marcas)
@@ -210,6 +228,8 @@ const TEXTOS = {
     tituloAccesos: "Accesos directos",
     disponible: "Disponible",
     enImplantacion: "En implantación",
+    guiaVer: "Guía de aplicaciones", guiaOcultar: "Ocultar guía",
+    juegos: { buscaminas: "Buscaminas", solitario: "Solitario", blackjack: "Blackjack", j2048: "2048", parejas: "Parejas", sudoku: "Sudoku" },
     version: "v",
     apps: {
       incidencias:   ["Control de incidencias", "Hoja de seguimiento de incidencias por rango y periodo."],
@@ -241,6 +261,8 @@ const TEXTOS = {
     tituloAccesos: "Shortcuts",
     disponible: "Available",
     enImplantacion: "Rolling out",
+    guiaVer: "App guide", guiaOcultar: "Hide guide",
+    juegos: { buscaminas: "Minesweeper", solitario: "Solitaire", blackjack: "Blackjack", j2048: "2048", parejas: "Memory", sudoku: "Sudoku" },
     version: "v",
     apps: {
       incidencias:   ["Issue log", "Issue tracking sheet by range and period."],
@@ -272,9 +294,10 @@ function pintarApps() {
   $("apps").innerHTML = APPS.map(a => {
     const [nombre, desc] = T.apps[a.id];
     const icono = `<span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONOS[a.icono]}</svg></span>`;
+    const pista = `<span class="juego">${T.juegos[a.juego]}</span>`;
     const estado = a.disponible
-      ? `<span class="chip ok">${T.disponible}</span><span class="ver">${T.version}${a.version}</span>`
-      : `<span class="chip wait">${T.enImplantacion}</span>`;
+      ? `<span class="izq"><span class="chip ok">${T.disponible}</span>${pista}</span><span class="ver">${T.version}${a.version}</span>`
+      : `<span class="izq"><span class="chip wait">${T.enImplantacion}</span>${pista}</span>`;
     const cuerpo = `${icono}<h3>${nombre}</h3><p>${desc}</p><div class="meta">${estado}</div>`;
     // El idioma viaja en el enlace (#es / #en): así la aplicación abre en el mismo idioma
     return a.disponible
@@ -300,6 +323,7 @@ function aplicarIdioma(nuevo) {
   // Marca la opción activa del selector de idioma
   document.querySelectorAll(".idioma button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === idioma)));
   $("grupoIdioma").setAttribute("aria-label", T.tipIdioma);
+  pintarBotonGuia();
   $("subnav").innerHTML = T.subnav.map((s, k) => `<span class="${k === 0 ? "on" : ""}">${s}</span>`).join("");
   $("noticias").innerHTML = T.noticias.map(([d, t]) => {
     const fecha = new Date(d + "T12:00:00").toLocaleDateString(T.locale, { day: "2-digit", month: "short" });
@@ -311,6 +335,23 @@ function aplicarIdioma(nuevo) {
 }
 
 document.querySelectorAll(".idioma button").forEach(b => b.addEventListener("click", () => aplicarIdioma(b.dataset.lang)));
+
+/* ===== Guía de aplicaciones: muestra el juego de cada tarjeta ===== */
+function pintarBotonGuia() {
+  const on = document.body.classList.contains("pistas");
+  $("btnGuia").textContent = on ? T.guiaOcultar : T.guiaVer;
+  $("btnGuia").setAttribute("aria-pressed", String(on));
+}
+function alternarGuia(forzar) {
+  document.body.classList.toggle("pistas", forzar);
+  pintarBotonGuia();
+}
+$("btnGuia").addEventListener("click", () => alternarGuia());
+document.addEventListener("keydown", e => {
+  if (e.target.closest("input")) return;
+  if (e.key === "?") alternarGuia();              // atajo: ? muestra u oculta la guía
+  if (e.key === "Escape") alternarGuia(false);    // pánico: Esc la oculta al instante
+});
 
 /* ===== Arranque: idioma de la URL (#es / #en) o del navegador ===== */
 const pedido = location.hash.slice(1).toLowerCase();
