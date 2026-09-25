@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<title>Aprobación de presupuestos</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Alta de partidas y validación de expedientes frente al límite de gasto.">
+<meta property="og:title" content="Aprobación de presupuestos">
+<meta property="og:description" content="Alta de partidas y validación de expedientes frente al límite de gasto.">
+<meta property="og:url" content="https://corporativo.recursosvidafacil.com/apps/presupuestos.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='1' width='14' height='14' rx='2' fill='%23466b8c'/%3E%3Cpath d='M11 5.2A3.6 3.6 0 1 0 11 10.8M4 7h5M4 9h5' stroke='%23fff' stroke-width='1.3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  /* ===== Tokens: misma paleta sobria de la suite ===== */
+  :root {
+    --chrome: #f3f4f6;
+    --chrome-2: #e8eaee;
+    --line: #d5d8de;
+    --bg: #eef0f3;
+    --surface: #ffffff;
+    --ink: #1f2328;
+    --ink-2: #5a6270;
+    --ink-3: #8a919c;
+    --accent: #466b8c;
+    --accent-soft: #e3ebf2;
+    --ok: #2d6140;   --ok-bg: #e2efe6;
+    --bad: #a3372a;  --bad-bg: #f7e3df;
+    --wait: #50575f; --wait-bg: #eceef1;
+    --font: Calibri, "Segoe UI", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 13px/1.35 var(--font); overflow: hidden; }
+  .app { display: flex; flex-direction: column; height: 100%; min-width: 0; }
+
+  /* ===== Barra de título ===== */
+  .titlebar { display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: var(--accent); color: #fff; white-space: nowrap; overflow: hidden; }
+  .launcher { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 3px; color: #fff; flex: none; }
+  .launcher:hover { background: rgba(255,255,255,.15); }
+  .launcher:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+  .launcher svg { width: 14px; height: 14px; fill: currentColor; }
+  .titlebar .doc { font-weight: 600; }
+  .titlebar .sub { opacity: .8; font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+  .titlebar .spacer { flex: 1; }
+  .titlebar .user { width: 22px; height: 22px; border-radius: 50%; background: #dfe7ee; color: var(--accent); display: grid; place-items: center; font-size: 10px; font-weight: 700; flex: none; }
+
+  /* ===== Barra de herramientas ===== */
+  .toolbar { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--chrome); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; white-space: nowrap; }
+  .toolbar::-webkit-scrollbar { display: none; }
+  .btn {
+    flex: none; height: 30px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line); border-radius: 3px; background: #fff; color: var(--ink); font: inherit; cursor: pointer;
+  }
+  .btn:hover:not(:disabled) { background: var(--accent-soft); }
+  .btn:disabled { color: var(--ink-3); background: #f7f8fa; cursor: default; }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover:not(:disabled) { background: #3d5f7e; }
+  .btn.primary:disabled { background: #a9b8c6; border-color: #a9b8c6; color: #fff; }
+  .btn kbd { font: inherit; font-size: 11px; color: var(--ink-3); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; line-height: 15px; }
+  .btn.primary kbd { color: #dfe7ee; border-color: rgba(255,255,255,.4); }
+  .sep { flex: none; width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
+  .combo { flex: none; height: 28px; padding: 0 8px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); background: #fff; border-radius: 3px; color: var(--ink-2); }
+  .combo::after { content: "▾"; font-size: 10px; color: var(--ink-3); margin-left: 4px; }
+  .combo b { color: var(--ink); font-weight: 600; }
+  .buscar { flex: none; margin-left: auto; height: 28px; width: 200px; padding: 0 8px; border: 1px solid var(--line); border-radius: 3px; font: inherit; background: #fff; color: var(--ink); }
+
+  /* ===== Pestañas de vista ===== */
+  .views { display: flex; gap: 2px; padding: 0 12px; background: #fff; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+  .views::-webkit-scrollbar { display: none; }
+  .view-tab { flex: none; padding: 8px 12px; border: 0; background: transparent; color: var(--ink-2); font: inherit; cursor: pointer; }
+  .view-tab[aria-selected="true"] { color: var(--accent); font-weight: 700; box-shadow: inset 0 -2px 0 var(--accent); }
+  .view-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  /* ===== Contenido ===== */
+  .main { flex: 1; min-height: 0; overflow: auto; }
+  .page { padding: 16px 16px 32px; max-width: 1180px; }
+  .page h2 { margin: 0; font-size: 18px; }
+  .muted { color: var(--ink-3); font-size: 12px; }
+
+  /* Cabecera del expediente */
+  .exphead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .exphead .left p { margin: 2px 0 0; }
+  .importe { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .importe .lbl { font-size: 12px; color: var(--ink-2); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: #fff; }
+  .seg button { border: 0; background: transparent; font: inherit; padding: 5px 11px; cursor: pointer; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 700; }
+  .seg button:disabled { cursor: default; opacity: .55; }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; min-width: 0; }
+  .panel h3 { margin: 0; font-size: 14px; }
+  .panel .ph { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+
+  table.lines { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .lines th, .lines td { padding: 6px 8px; border-bottom: 1px solid #e6e8ec; text-align: left; white-space: nowrap; }
+  .lines th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); font-weight: 700; }
+  .lines td.n { text-align: right; }
+  .lines td.c { white-space: normal; }
+  .lines td.idx { color: var(--ink-3); width: 28px; }
+  .lines tr.empty td { color: transparent; }
+  .lines tr.hold td { color: var(--ink-3); font-style: italic; background: repeating-linear-gradient(135deg, #f7f8fa 0 6px, #f0f2f5 6px 12px); }
+  .lines tr.new td { background: #fbfaf0; }
+  .cat { display: inline-block; font-size: 11px; padding: 0 7px; border-radius: 8px; background: var(--wait-bg); color: var(--ink-2); line-height: 16px; }
+  .flex { font-size: 11px; color: var(--ink-3); margin-left: 4px; }
+
+  /* Total frente al límite */
+  .total { margin-top: 10px; }
+  .total .row { display: flex; justify-content: space-between; align-items: baseline; font-variant-numeric: tabular-nums; }
+  .total .big { font-size: 20px; font-weight: 700; }
+  .meter { position: relative; height: 8px; background: #e6e8ec; border-radius: 4px; margin-top: 6px; overflow: hidden; }
+  .meter span { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); border-radius: 4px; }
+  .meter.full span { background: var(--ok); }
+  .meter.over span { background: var(--bad); }
+
+  /* Estado del expediente (tipo sello de aprobación) */
+  .estado { display: inline-block; padding: 2px 10px; border-radius: 4px; border: 1.5px solid currentColor; font-weight: 700; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+  .estado.ok { color: var(--ok); background: var(--ok-bg); }
+  .estado.bad { color: var(--bad); background: var(--bad-bg); }
+  .estado.wait { color: var(--wait); background: var(--wait-bg); }
+  .estado.run { color: var(--accent); background: var(--accent-soft); }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .note { margin-top: 10px; color: var(--ink-2); font-size: 12px; }
+
+  /* Histórico */
+  .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
+  .kpi { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; }
+  .kpi .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kpi .l { font-size: 12px; color: var(--ink-3); }
+  .tablewrap { overflow-x: auto; }
+  .pos { color: var(--ok); } .neg { color: var(--bad); }
+  td.wrap { white-space: normal; min-width: 260px; }
+
+  /* ===== Barra de estado ===== */
+  .status { display: flex; align-items: center; gap: 18px; padding: 3px 12px; padding-bottom: calc(3px + env(safe-area-inset-bottom, 0px)); background: var(--chrome); border-top: 1px solid var(--line); color: var(--ink-2); font-size: 12px; white-space: nowrap; overflow: hidden; font-variant-numeric: tabular-nums; }
+  .status .spacer { flex: 1; }
+  #btnIdioma { border: 0; background: transparent; color: inherit; font: inherit; padding: 1px 4px; border-radius: 2px; cursor: pointer; }
+  #btnIdioma:hover { background: var(--chrome-2); }
+  #btnIdioma:focus-visible { outline: 2px solid var(--accent); }
+
+  .toast { position: fixed; right: 16px; bottom: 44px; max-width: calc(100% - 32px); z-index: 60; background: #fff; color: var(--ink); border: 1px solid var(--line); border-left: 3px solid var(--accent); box-shadow: 0 2px 8px rgba(20, 30, 45, .15); padding: 8px 12px; }
+  .toast.ok { border-left-color: var(--ok); }
+  .toast.bad { border-left-color: var(--bad); }
+
+  @media (max-width: 760px) {
+    .grid2 { grid-template-columns: minmax(0, 1fr); }
+    .kpis { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .titlebar .sub, .combo, .buscar, .toolbar .sep { display: none; }
+    .status { gap: 10px; }
+    .status .opt { display: none; }
+    .btn kbd { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="titlebar">
+    <a class="launcher" id="lnkPortal" href="../index.html"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="2" cy="2" r="1.4"/><circle cx="7" cy="2" r="1.4"/><circle cx="12" cy="2" r="1.4"/><circle cx="2" cy="7" r="1.4"/><circle cx="7" cy="7" r="1.4"/><circle cx="12" cy="7" r="1.4"/><circle cx="2" cy="12" r="1.4"/><circle cx="7" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/></svg></a>
+    <span class="doc" data-t="app"></span>
+    <span class="sub" data-t="sub"></span>
+    <span class="spacer"></span>
+    <span class="user" aria-hidden="true">LF</span>
+  </header>
+
+  <div class="toolbar">
+    <button class="btn primary" id="btnNuevo" type="button">
+      <svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg><span data-t="nuevo"></span>
+    </button>
+    <span class="sep"></span>
+    <span class="combo"><span data-t="ejercicio"></span> <b>2026</b></span>
+    <span class="combo"><span data-t="centro"></span> <b>CC-410</b></span>
+    <input class="buscar" id="buscar" type="search" autocomplete="off">
+  </div>
+
+  <nav class="views" role="tablist">
+    <button class="view-tab" type="button" role="tab" data-vista="expediente"></button>
+    <button class="view-tab" type="button" role="tab" data-vista="historico"></button>
+    <button class="view-tab" type="button" role="tab" data-vista="guia"></button>
+  </nav>
+
+  <main class="main" id="main">
+    <div class="page" id="vExpediente"></div>
+    <div class="page" id="vHistorico" hidden></div>
+    <div class="page" id="vGuia" hidden></div>
+  </main>
+
+  <footer class="status">
+    <span class="opt" data-t="conectado"></span>
+    <span class="spacer"></span>
+    <span id="stCredito"></span>
+    <span class="opt" id="stExp"></span>
+    <span id="stTiempo"></span>
+    <button id="btnIdioma" type="button"></button>
+  </footer>
+  <div class="toast" id="toast" role="status" hidden></div>
+</div>
+
+<script>
+/* =====================================================================
+   CONSTANTES (reglas y textos)
+   ===================================================================== */
+const LIMITE = 21;                  // límite de gasto (el 21 del blackjack)
+const AUDITORIA_SE_PLANTA = 17;     // la banca pide hasta llegar a 17
+const CREDITO_INICIAL = 1000;
+const IMPORTES = [10, 25, 50, 100]; // apuestas posibles
+const LOTES = 4;                    // barajas en el zapato
+const RECARGA_BAJO = 20;            // se rebaraja cuando quedan menos cartas que esto
+const PAUSA_AUDITORIA_MS = 500;     // ritmo al revelar las partidas de auditoría
+const DURACION_TOAST = 4500;
+const FILAS_MINIMAS = 5;            // filas vacías para que parezca un formulario
+
+const TEXTOS = {
+  es: {
+    nombreIdioma: "Español (España)", tipIdioma: "Idioma", portal: "Aplicaciones", locale: "es-ES",
+    app: "Aprobación de presupuestos", sub: "· Control de gasto · Ejercicio 2026",
+    nuevo: "Nuevo expediente", ejercicio: "Ejercicio:", centro: "Centro de coste:", buscar: "Buscar expediente…",
+    vistas: { expediente: "Expediente", historico: "Histórico", guia: "Guía" },
+    conectado: "Conectado",
+    credito: v => `Crédito disponible: ${v}`,
+    expedientes: n => `Expedientes: ${n}`,
+    tiempo: "Tiempo de sesión: ",
+    k: v => `${v.toLocaleString("es-ES")} k€`,
+    exp: n => `Expediente EXP-2026-${String(n).padStart(4, "0")}`,
+    expCorto: n => `EXP-2026-${String(n).padStart(4, "0")}`,
+    expSub: "Solicitud de gasto frente a límite de 21 k€",
+    importe: "Importe comprometido:",
+    solicitud: "Solicitud", auditoria: "Auditoría · Control presupuestario",
+    cab: ["#", "Concepto", "Categoría", "Importe"],
+    pendiente: "Pendiente de revisión",
+    total: "Total", limite: "Límite",
+    flexible: "(partida flexible)",
+    categorias: ["Personal", "Viajes", "Material", "Servicios"],
+    conceptos: [
+      ["Horas extra", "Refuerzo temporal", "Formación interna", "Dietas de equipo", "Guardias", "Becario", "Plus de turnicidad", "Selección de personal", "Prevención de riesgos", "Seguro colectivo"],
+      ["Vuelo a obra", "Hotel 2 noches", "Alquiler de coche", "Kilometraje", "Tren ida y vuelta", "Visita a cliente", "Feria sectorial", "Parking", "Taxi aeropuerto", "Visado"],
+      ["Portátil", "Monitores", "EPIs", "Material de oficina", "Herramienta menor", "Repuestos", "Mobiliario", "Impresora", "Consumibles", "Señalización"],
+      ["Consultoría externa", "Licencias anuales", "Traducción", "Mensajería", "Asesoría legal", "Auditoría externa", "Limpieza", "Catering reunión", "Alquiler de sala", "Soporte técnico"],
+    ],
+    variable: "Partida variable",
+    acciones: { pedir: "Añadir partida", plantar: "Cerrar y enviar", doblar: "Duplicar alcance", nuevo: "Nuevo expediente" },
+    teclas: { pedir: "A", plantar: "C", doblar: "D", nuevo: "N" },
+    estados: { borrador: "Borrador", curso: "En tramitación", auditoria: "En auditoría" },
+    resultados: {
+      bj: "Aprobación directa", gana: "Aprobado", empate: "Aplazado", pierde: "Rechazado", pasa: "Rechazado",
+    },
+    notas: {
+      bj: v => `Aprobación directa sin auditoría: ${v}.`,
+      gana: v => `Expediente aprobado: ${v}.`,
+      ganaPasa: v => `Auditoría supera el límite. Expediente aprobado: ${v}.`,
+      empate: () => "Mismo importe que auditoría. Expediente aplazado: se recupera el importe comprometido.",
+      pierde: v => `Auditoría presenta mejor propuesta. Expediente rechazado: ${v}.`,
+      pasa: v => `La solicitud supera el límite de 21 k€. Expediente rechazado: ${v}.`,
+      dealerBj: v => `Auditoría presenta propuesta directa. Expediente rechazado: ${v}.`,
+    },
+    ayudaBorrador: "Elige el importe comprometido y pulsa «Nuevo expediente».",
+    sinCredito: "Crédito insuficiente para este importe.",
+    ampliar: "Solicitar ampliación de crédito",
+    ampliado: "Crédito ampliado.",
+    historico: {
+      titulo: "Histórico de expedientes", sub: "Centro de coste CC-410 · Ejercicio 2026",
+      kpis: ["Expedientes tramitados", "Tasa de aprobación", "Crédito disponible"],
+      cab: ["Expediente", "Fecha", "Solicitado", "Auditoría", "Estado", "Variación"],
+    },
+    guia: {
+      titulo: "Guía de tramitación", sub: "Procedimiento interno · Rev. 4",
+      cab: ["Concepto", "Acción", "Descripción"],
+      filas: [
+        ["Objetivo", "—", "Acercar el total de la solicitud a 21 k€ sin superarlo y quedar por encima de Auditoría."],
+        ["Importe comprometido", "Selector", "Lo que arriesgas en cada expediente. Se fija antes de abrirlo."],
+        ["Nuevo expediente", "Botón · N", "Abre un expediente: 2 partidas para ti y 2 para Auditoría (una oculta)."],
+        ["Añadir partida", "Botón · A", "Suma otra partida a tu solicitud. Si pasas de 21 k€, se rechaza."],
+        ["Cerrar y enviar", "Botón · C", "Te plantas. Auditoría revela su partida oculta y añade partidas hasta llegar a 17 k€ o más."],
+        ["Duplicar alcance", "Botón · D", "Solo con 2 partidas: duplicas el importe comprometido, recibes 1 partida más y se envía."],
+        ["Importes", "—", "Cada partida vale su importe. Las de 10 k€ son las más frecuentes. La «partida variable» vale 1 u 11 k€, lo que más convenga."],
+        ["Aprobación directa", "—", "21 k€ con las 2 primeras partidas: cobras 1,5 veces lo comprometido."],
+        ["Resultados", "—", "Aprobado: ganas lo comprometido. Aplazado (empate): lo recuperas. Rechazado: lo pierdes."],
+        ["Vista de histórico", "Esc", "Cambia al Histórico al instante. Esc de nuevo para volver al expediente."],
+        ["Idioma", "Barra de estado", "Pulse el indicador de idioma para alternar entre español e inglés."],
+      ],
+    },
+  },
+  en: {
+    nombreIdioma: "English (UK)", tipIdioma: "Language", portal: "Apps", locale: "en-GB",
+    app: "Budget approval", sub: "· Spend control · FY 2026",
+    nuevo: "New request", ejercicio: "Fiscal year:", centro: "Cost centre:", buscar: "Search request…",
+    vistas: { expediente: "Request", historico: "History", guia: "Guide" },
+    conectado: "Connected",
+    credito: v => `Available credit: ${v}`,
+    expedientes: n => `Requests: ${n}`,
+    tiempo: "Session time: ",
+    k: v => `€${v.toLocaleString("en-GB")}k`,
+    exp: n => `Request REQ-2026-${String(n).padStart(4, "0")}`,
+    expCorto: n => `REQ-2026-${String(n).padStart(4, "0")}`,
+    expSub: "Spend request against a €21k limit",
+    importe: "Committed amount:",
+    solicitud: "Request", auditoria: "Audit · Budget control",
+    cab: ["#", "Item", "Category", "Amount"],
+    pendiente: "Pending review",
+    total: "Total", limite: "Limit",
+    flexible: "(flexible item)",
+    categorias: ["Staff", "Travel", "Equipment", "Services"],
+    conceptos: [
+      ["Overtime", "Temporary cover", "Internal training", "Team allowances", "On-call shifts", "Intern", "Shift premium", "Recruitment", "Health & safety", "Group insurance"],
+      ["Flight to site", "Hotel, 2 nights", "Car hire", "Mileage", "Return train", "Client visit", "Trade fair", "Parking", "Airport taxi", "Visa"],
+      ["Laptop", "Monitors", "PPE", "Office supplies", "Small tools", "Spare parts", "Furniture", "Printer", "Consumables", "Signage"],
+      ["External consultancy", "Annual licences", "Translation", "Courier", "Legal advice", "External audit", "Cleaning", "Meeting catering", "Room hire", "Technical support"],
+    ],
+    variable: "Variable item",
+    acciones: { pedir: "Add item", plantar: "Close & submit", doblar: "Double scope", nuevo: "New request" },
+    teclas: { pedir: "A", plantar: "C", doblar: "D", nuevo: "N" },
+    estados: { borrador: "Draft", curso: "In progress", auditoria: "Under audit" },
+    resultados: {
+      bj: "Fast-track approval", gana: "Approved", empate: "Deferred", pierde: "Rejected", pasa: "Rejected",
+    },
+    notas: {
+      bj: v => `Fast-track approval with no audit: ${v}.`,
+      gana: v => `Request approved: ${v}.`,
+      ganaPasa: v => `Audit exceeds the limit. Request approved: ${v}.`,
+      empate: () => "Same amount as audit. Request deferred: committed amount returned.",
+      pierde: v => `Audit submitted a better proposal. Request rejected: ${v}.`,
+      pasa: v => `The request exceeds the €21k limit. Request rejected: ${v}.`,
+      dealerBj: v => `Audit submitted a fast-track proposal. Request rejected: ${v}.`,
+    },
+    ayudaBorrador: "Choose the committed amount and click “New request”.",
+    sinCredito: "Not enough credit for this amount.",
+    ampliar: "Request credit extension",
+    ampliado: "Credit extended.",
+    historico: {
+      titulo: "Request history", sub: "Cost centre CC-410 · FY 2026",
+      kpis: ["Requests processed", "Approval rate", "Available credit"],
+      cab: ["Request", "Date", "Requested", "Audit", "Status", "Change"],
+    },
+    guia: {
+      titulo: "Processing guide", sub: "Internal procedure · Rev. 4",
+      cab: ["Item", "Action", "Description"],
+      filas: [
+        ["Goal", "—", "Get your request total as close to €21k as possible without going over, and beat Audit."],
+        ["Committed amount", "Selector", "What you risk on each request. Set it before opening one."],
+        ["New request", "Button · N", "Opens a request: 2 items for you and 2 for Audit (one hidden)."],
+        ["Add item", "Button · A", "Adds another item to your request. Over €21k and it is rejected."],
+        ["Close & submit", "Button · C", "You stand. Audit reveals its hidden item and adds items until it reaches €17k or more."],
+        ["Double scope", "Button · D", "Only with 2 items: doubles the committed amount, you get exactly 1 more item and it is submitted."],
+        ["Amounts", "—", "Each item is worth its amount. €10k items are the most common. A “variable item” counts as €1k or €11k, whichever helps."],
+        ["Fast-track approval", "—", "€21k with your first 2 items: you win 1.5 times the committed amount."],
+        ["Outcomes", "—", "Approved: you win the committed amount. Deferred (tie): you get it back. Rejected: you lose it."],
+        ["History view", "Esc", "Switches to History instantly. Press Esc again to return to the request."],
+        ["Language", "Status bar", "Click the language indicator to switch between Spanish and English."],
+      ],
+    },
+  },
+};
+
+// Expedientes ficticios antiguos para que el histórico no empiece vacío: [n, fecha, solicitado, auditoría, resultado, variación]
+const HISTORICO_SEMILLA = [
+  [136, "2026-09-18", 19, 17, "gana", 50], [137, "2026-09-18", 23, 18, "pasa", -25], [138, "2026-09-19", 20, 20, "empate", 0],
+  [139, "2026-09-22", 21, 19, "bj", 75], [140, "2026-09-23", 17, 19, "pierde", -50], [141, "2026-09-23", 18, 22, "gana", 25],
+];
+
+/* =====================================================================
+   LÓGICA DEL JUEGO (blackjack, solo estado)
+   Carta = { s: palo 0-3 (categoría), r: 1-13 }   r=1 es la partida variable (as)
+   ===================================================================== */
+const valorCarta = c => (c.r >= 10 ? 10 : c.r);
+
+// Total de una mano: los ases valen 11 si no se pasa de 21
+function valorMano(cartas) {
+  let total = 0, ases = 0;
+  for (const c of cartas) { total += valorCarta(c); if (c.r === 1) ases++; }
+  const blanda = ases > 0 && total + 10 <= LIMITE;
+  return { total: blanda ? total + 10 : total, blanda };
+}
+const esDirecta = cartas => cartas.length === 2 && valorMano(cartas).total === LIMITE;
+
+function nuevoZapato() {
+  const z = [];
+  for (let l = 0; l < LOTES; l++) for (let s = 0; s < 4; s++) for (let r = 1; r <= 13; r++) z.push({ s, r });
+  for (let i = z.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [z[i], z[j]] = [z[j], z[i]]; }
+  return z;
+}
+
+const juego = {
+  credito: CREDITO_INICIAL, importe: 50, comprometido: 0,
+  zapato: nuevoZapato(), mano: [], banca: [],
+  fase: "borrador",           // borrador | curso | auditoria | fin
+  resultado: null, nota: null, expediente: 141, tramitados: 0, historial: [],
+};
+
+function robarCarta() {
+  if (juego.zapato.length < RECARGA_BAJO) juego.zapato = nuevoZapato();
+  return juego.zapato.pop();
+}
+
+function abrirExpediente() {
+  if (juego.fase === "curso" || juego.fase === "auditoria") return false;
+  if (juego.credito < juego.importe) { toast(T.sinCredito, "bad"); return false; }
+  juego.credito -= juego.importe;
+  juego.comprometido = juego.importe;
+  juego.mano = [robarCarta(), robarCarta()];
+  juego.banca = [robarCarta(), robarCarta()];
+  juego.expediente++;
+  juego.fase = "curso"; juego.resultado = null; juego.nota = null;
+  if (!crono.activo) { crono.activo = true; arrancar(); }
+  // Aprobaciones directas (blackjack natural) se resuelven al momento
+  if (esDirecta(juego.mano) || esDirecta(juego.banca)) resolver();
+  return true;
+}
+
+function anadirPartida() {
+  if (juego.fase !== "curso") return;
+  juego.mano.push(robarCarta());
+  const t = valorMano(juego.mano).total;
+  if (t > LIMITE) resolver();
+  else if (t === LIMITE) cerrarYEnviar();
+  else render();
+}
+
+function duplicarAlcance() {
+  if (juego.fase !== "curso" || juego.mano.length !== 2 || juego.credito < juego.comprometido) return;
+  juego.credito -= juego.comprometido;
+  juego.comprometido *= 2;
+  juego.mano.push(robarCarta());
+  if (valorMano(juego.mano).total > LIMITE) resolver();
+  else cerrarYEnviar();
+}
+
+// La auditoría (banca) destapa su carta y pide hasta 17, con pausas para verlo
+function cerrarYEnviar() {
+  if (juego.fase !== "curso") return;
+  juego.fase = "auditoria";
+  render();
+  const paso = () => {
+    if (valorMano(juego.banca).total < AUDITORIA_SE_PLANTA) {
+      juego.banca.push(robarCarta()); render();
+      setTimeout(paso, PAUSA_AUDITORIA_MS);
+    } else resolver();
+  };
+  setTimeout(paso, PAUSA_AUDITORIA_MS);
+}
+
+function resolver() {
+  const p = valorMano(juego.mano).total, b = valorMano(juego.banca).total;
+  const pBj = esDirecta(juego.mano), bBj = esDirecta(juego.banca);
+  const c = juego.comprometido;
+  let res, cobro, nota;
+  if (p > LIMITE)            { res = "pasa";   cobro = 0;       nota = ["pasa", -c]; }
+  else if (pBj && !bBj)      { res = "bj";     cobro = c * 2.5; nota = ["bj", c * 1.5]; }
+  else if (bBj && !pBj)      { res = "pierde"; cobro = 0;       nota = ["dealerBj", -c]; }
+  else if (pBj && bBj)       { res = "empate"; cobro = c;       nota = ["empate", 0]; }
+  else if (b > LIMITE)       { res = "gana";   cobro = c * 2;   nota = ["ganaPasa", c]; }
+  else if (p > b)            { res = "gana";   cobro = c * 2;   nota = ["gana", c]; }
+  else if (p === b)          { res = "empate"; cobro = c;       nota = ["empate", 0]; }
+  else                       { res = "pierde"; cobro = 0;       nota = ["pierde", -c]; }
+  juego.credito += cobro;
+  juego.fase = "fin"; juego.resultado = res; juego.nota = nota; juego.tramitados++;
+  juego.historial.unshift([juego.expediente, hoyISO(), p, b, res, cobro - c]);
+  render();
+  const tono = res === "gana" || res === "bj" ? "ok" : res === "empate" ? "" : "bad";
+  toast(textoNota(nota), tono);
+}
+
+function ampliarCredito() { juego.credito = CREDITO_INICIAL; toast(T.ampliado, "ok"); render(); }
+
+/* ===== Cronómetro de sesión (se pausa en las vistas seguras) ===== */
+const crono = { ms: 0, inicio: 0, activo: false };
+function arrancar() { if (crono.activo && !crono.inicio) crono.inicio = performance.now(); }
+function parar() { if (crono.inicio) { crono.ms += performance.now() - crono.inicio; crono.inicio = 0; } }
+function transcurrido() { return crono.ms + (crono.inicio ? performance.now() - crono.inicio : 0); }
+
+/* =====================================================================
+   RENDERIZADO
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+let idioma = "es", T = TEXTOS.es, vista = "expediente";
+
+function hoyISO() { const d = new Date(); return d.toISOString().slice(0, 10); }
+function fecha(iso) { return new Date(iso + "T12:00:00").toLocaleDateString(T.locale, { day: "2-digit", month: "2-digit", year: "numeric" }); }
+function signo(v) { return (v > 0 ? "+" : v < 0 ? "−" : "") + T.k(Math.abs(v)); }
+function textoNota([cod, v]) { return T.notas[cod](signo(v)); }
+
+function concepto(c) { return c.r === 1 ? T.variable : T.conceptos[c.s][(c.r * 3 + c.s) % 10]; }
+
+// Tabla de partidas: oculta = índice de la carta que aún no se enseña
+function tablaPartidas(cartas, oculta) {
+  const filas = cartas.map((c, i) => {
+    if (i === oculta) return `<tr class="hold"><td class="idx">${i + 1}</td><td class="c">${T.pendiente}</td><td>—</td><td class="n">—</td></tr>`;
+    const nueva = i >= 2 && i === cartas.length - 1 ? ' class="new"' : "";
+    const imp = c.r === 1 ? `${T.k(1)} / ${T.k(11)}` : T.k(valorCarta(c));
+    return `<tr${nueva}><td class="idx">${i + 1}</td><td class="c">${concepto(c)}</td><td><span class="cat">${T.categorias[c.s]}</span></td><td class="n">${imp}</td></tr>`;
+  });
+  for (let i = cartas.length; i < FILAS_MINIMAS; i++) filas.push(`<tr class="empty"><td class="idx">${i + 1}</td><td>·</td><td>·</td><td>·</td></tr>`);
+  return `<table class="lines"><thead><tr>${T.cab.map((h, k) => `<th${k === 3 ? ' style="text-align:right"' : ""}>${h}</th>`).join("")}</tr></thead><tbody>${filas.join("")}</tbody></table>`;
+}
+
+function bloqueTotal(cartas, oculta) {
+  const visibles = oculta == null ? cartas : cartas.filter((_, i) => i !== oculta);
+  const { total, blanda } = valorMano(visibles);
+  const cls = total > LIMITE ? "over" : total === LIMITE ? "full" : "";
+  const pct = Math.min(100, total / LIMITE * 100);
+  return `<div class="total"><div class="row"><span>${T.total}${blanda ? ` <span class="flex">${T.flexible}</span>` : ""}</span>
+      <span><span class="big">${cartas.length ? T.k(total) : "—"}</span> <span class="muted">/ ${T.limite} ${T.k(LIMITE)}</span></span></div>
+    <div class="meter ${cls}"><span style="width:${pct}%"></span></div></div>`;
+}
+
+function sello() {
+  const f = juego.fase;
+  if (f === "borrador") return `<span class="estado wait">${T.estados.borrador}</span>`;
+  if (f === "curso") return `<span class="estado run">${T.estados.curso}</span>`;
+  if (f === "auditoria") return `<span class="estado run">${T.estados.auditoria}</span>`;
+  const r = juego.resultado;
+  const cls = r === "gana" || r === "bj" ? "ok" : r === "empate" ? "wait" : "bad";
+  return `<span class="estado ${cls}">${T.resultados[r]}</span>`;
+}
+
+function render() {
+  const j = juego, jugando = j.fase === "curso";
+  const bancaOculta = (j.fase === "curso") ? 1 : null;       // la 2.ª partida de auditoría, oculta mientras juegas
+  const tecla = k => `<kbd>${T.teclas[k]}</kbd>`;
+  const hayMano = j.mano.length > 0;
+  const nota = j.fase === "fin" ? `<p class="note">${textoNota(j.nota)}</p>` : (j.fase === "borrador" ? `<p class="note">${T.ayudaBorrador}</p>` : "");
+  const sinFondos = (j.fase === "borrador" || j.fase === "fin") && j.credito < Math.min(...IMPORTES);
+
+  $("vExpediente").innerHTML = `
+    <div class="exphead">
+      <div class="left"><h2>${hayMano ? T.exp(j.expediente) : T.exp(j.expediente + 1)}</h2><p class="muted">${T.expSub}</p></div>
+      <div class="importe"><span class="lbl">${T.importe}</span>
+        <span class="seg" role="group" aria-label="${T.importe}">${IMPORTES.map(v =>
+          `<button type="button" data-importe="${v}" aria-pressed="${v === (jugando || j.fase === "auditoria" ? j.comprometido : j.importe)}" ${jugando || j.fase === "auditoria" || v > j.credito ? "disabled" : ""}>${T.k(v)}</button>`).join("")}</span>
+        ${sello()}
+      </div>
+    </div>
+    <div class="grid2">
+      <section class="panel"><div class="ph"><h3>${T.solicitud}</h3><span class="muted">${j.comprometido && hayMano ? T.importe + " " + T.k(j.comprometido) : ""}</span></div>
+        ${tablaPartidas(j.mano, null)}${bloqueTotal(j.mano, null)}
+        <div class="actions">
+          <button class="btn primary" type="button" id="aPedir" ${jugando ? "" : "disabled"}>${T.acciones.pedir} ${tecla("pedir")}</button>
+          <button class="btn" type="button" id="aPlantar" ${jugando ? "" : "disabled"}>${T.acciones.plantar} ${tecla("plantar")}</button>
+          <button class="btn" type="button" id="aDoblar" ${jugando && j.mano.length === 2 && j.credito >= j.comprometido ? "" : "disabled"}>${T.acciones.doblar} ${tecla("doblar")}</button>
+          <button class="btn" type="button" id="aNuevo" ${jugando || j.fase === "auditoria" ? "disabled" : ""}>${T.acciones.nuevo} ${tecla("nuevo")}</button>
+          ${sinFondos ? `<button class="btn" type="button" id="aAmpliar">${T.ampliar}</button>` : ""}
+        </div>${nota}</section>
+      <section class="panel"><div class="ph"><h3>${T.auditoria}</h3></div>
+        ${tablaPartidas(j.banca, bancaOculta)}${bloqueTotal(j.banca, bancaOculta)}</section>
+    </div>`;
+  $("btnNuevo").disabled = jugando || j.fase === "auditoria";
+  pintarEstado();
+  if (vista === "historico") construirHistorico();
+}
+
+function pintarEstado() {
+  $("stCredito").textContent = T.credito(T.k(juego.credito));
+  $("stExp").textContent = T.expedientes(juego.tramitados);
+  const s = Math.floor(transcurrido() / 1000);
+  $("stTiempo").textContent = T.tiempo + String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+}
+
+let temporizadorToast = 0;
+function toast(texto, tono) {
+  $("toast").textContent = texto;
+  $("toast").className = "toast" + (tono ? " " + tono : "");
+  $("toast").hidden = false;
+  clearTimeout(temporizadorToast);
+  temporizadorToast = setTimeout(() => { $("toast").hidden = true; }, DURACION_TOAST);
+}
+
+/* ===== Histórico (vista de pánico) ===== */
+function construirHistorico() {
+  const H = T.historico;
+  const filas = [...juego.historial, ...HISTORICO_SEMILLA.slice().reverse()];
+  const aprobados = filas.filter(f => f[4] === "gana" || f[4] === "bj").length;
+  const cls = r => r === "gana" || r === "bj" ? "ok" : r === "empate" ? "wait" : "bad";
+  $("vHistorico").innerHTML = `<h2>${H.titulo}</h2><p class="muted">${H.sub}</p>
+    <div class="kpis">
+      <div class="kpi"><div class="v">${filas.length}</div><div class="l">${H.kpis[0]}</div></div>
+      <div class="kpi"><div class="v">${Math.round(aprobados / filas.length * 100)} %</div><div class="l">${H.kpis[1]}</div></div>
+      <div class="kpi"><div class="v">${T.k(juego.credito)}</div><div class="l">${H.kpis[2]}</div></div>
+    </div>
+    <section class="panel"><div class="tablewrap"><table class="lines">
+      <thead><tr>${H.cab.map((h, k) => `<th${k === 2 || k === 3 || k === 5 ? ' style="text-align:right"' : ""}>${h}</th>`).join("")}</tr></thead>
+      <tbody>${filas.map(([n, f, p, b, r, v]) => `<tr><td>${T.expCorto(n)}</td><td>${fecha(f)}</td><td class="n">${T.k(p)}</td><td class="n">${T.k(b)}</td>
+        <td><span class="estado ${cls(r)}" style="font-size:11px;padding:0 8px">${T.resultados[r]}</span></td>
+        <td class="n ${v > 0 ? "pos" : v < 0 ? "neg" : ""}">${signo(v)}</td></tr>`).join("")}</tbody>
+    </table></div></section>`;
+}
+
+function construirGuia() {
+  const G = T.guia;
+  $("vGuia").innerHTML = `<h2>${G.titulo}</h2><p class="muted">${G.sub}</p>
+    <section class="panel" style="margin-top:14px"><div class="tablewrap"><table class="lines">
+      <thead><tr>${G.cab.map(c => `<th>${c}</th>`).join("")}</tr></thead>
+      <tbody>${G.filas.map(f => `<tr><td><b>${f[0]}</b></td><td>${f[1]}</td><td class="wrap">${f[2]}</td></tr>`).join("")}</tbody>
+    </table></div></section>`;
+}
+
+/* ===== Vistas ===== */
+function mostrarVista(v) {
+  if (v === vista) return;
+  if (vista === "expediente") parar();
+  vista = v;
+  $("vExpediente").hidden = v !== "expediente";
+  $("vHistorico").hidden = v !== "historico";
+  $("vGuia").hidden = v !== "guia";
+  $("toast").hidden = true;
+  $("main").scrollTo(0, 0);
+  if (v === "historico") construirHistorico();
+  if (v === "expediente" && crono.activo) arrancar();
+  document.querySelectorAll(".view-tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.vista === v)));
+  pintarEstado();
+}
+
+/* ===== Idioma ===== */
+function aplicarIdioma(nuevo) {
+  idioma = nuevo; T = TEXTOS[idioma];
+  document.documentElement.lang = idioma;
+  document.title = T.app;
+  document.querySelectorAll("[data-t]").forEach(n => { n.textContent = T[n.dataset.t]; });
+  document.querySelectorAll(".view-tab").forEach(b => { b.textContent = T.vistas[b.dataset.vista]; });
+  $("buscar").placeholder = T.buscar; $("buscar").setAttribute("aria-label", T.buscar);
+  $("btnIdioma").textContent = T.nombreIdioma; $("btnIdioma").title = T.tipIdioma;
+  $("lnkPortal").href = "../index.html#" + idioma;
+  $("lnkPortal").title = T.portal; $("lnkPortal").setAttribute("aria-label", T.portal);
+  $("toast").hidden = true;
+  construirGuia(); render();
+}
+
+/* ===== Eventos ===== */
+$("vExpediente").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b || b.disabled) return;
+  if (b.dataset.importe) { juego.importe = +b.dataset.importe; render(); return; }
+  if (b.id === "aPedir") anadirPartida();
+  else if (b.id === "aPlantar") cerrarYEnviar();
+  else if (b.id === "aDoblar") duplicarAlcance();
+  else if (b.id === "aNuevo") { if (abrirExpediente()) render(); }
+  else if (b.id === "aAmpliar") ampliarCredito();
+});
+$("btnNuevo").addEventListener("click", () => { mostrarVista("expediente"); if (abrirExpediente()) render(); });
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") {                                  // botón de pánico: instantáneo
+    e.preventDefault();
+    mostrarVista(vista === "expediente" ? "historico" : "expediente");
+    return;
+  }
+  if (vista !== "expediente" || e.target.closest("input") || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === "a") anadirPartida();
+  else if (k === "c") cerrarYEnviar();
+  else if (k === "d") duplicarAlcance();
+  else if (k === "n") { if (abrirExpediente()) render(); }
+});
+
+$("btnIdioma").addEventListener("click", () => aplicarIdioma(idioma === "es" ? "en" : "es"));
+document.querySelectorAll(".view-tab").forEach(b => b.addEventListener("click", () => mostrarVista(b.dataset.vista)));
+setInterval(() => { if (crono.inicio) pintarEstado(); }, 250);
+
+/* ===== Arranque ===== */
+const pedido = location.hash.slice(1).toLowerCase();
+aplicarIdioma(TEXTOS[pedido] ? pedido : ((navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en"));
+document.querySelectorAll(".view-tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.vista === vista)));
+</script>
+</body>
+</html>

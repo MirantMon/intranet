@@ -122,6 +122,8 @@
   .colhead span { font-weight: 400; color: var(--ink-3); font-variant-numeric: tabular-nums; }
   .stack { position: relative; width: var(--cw); }
   .col.over, .slot.over { box-shadow: inset 0 0 0 2px var(--accent); }
+  /* Destino rechazado: marco rojo suave durante un instante */
+  .col.bad, .slot.bad { box-shadow: inset 0 0 0 2px #c0473a; background-color: #f7e3df; }
 
   /* ===== Tarjeta de ticket ===== */
   .card {
@@ -199,6 +201,7 @@
     background: #fff; color: var(--ink); border: 1px solid var(--line); border-left: 3px solid var(--accent);
     box-shadow: 0 2px 8px rgba(20, 30, 45, .15); padding: 8px 12px;
   }
+  .toast.err { border-left-color: #c0473a; }
 
   @media (max-width: 900px) { .report { grid-template-columns: minmax(0, 1fr); } }
   @media (max-width: 640px) {
@@ -291,6 +294,16 @@ const TEXTOS = {
       ["Renovar licencias", "Alta de usuario nuevo", "Migrar carpeta compartida", "Revisar copias de seguridad", "Actualizar cliente VPN", "Configurar impresora planta 2", "Restablecer permisos"],
     ],
     victoria: "Sprint cerrado: todos los tickets completados.",
+    // Avisos de movimiento no válido (reciben datos del caso concreto)
+    errores: {
+      grupo: () => "Dependencia no válida: el ticket debe ser del otro grupo de departamentos (FIN/LEG ↔ OPS/SIS).",
+      puntos: n => `Dependencia no válida: aquí solo encaja un ticket de ${n} puntos.`,
+      vacia: () => "Solo un ticket de 13 puntos puede abrir una columna vacía.",
+      depto: d => `Esta columna solo admite tickets de ${d}.`,
+      orden: n => `El siguiente ticket que se puede cerrar aquí es el de ${n} puntos.`,
+      varios: () => "Los tickets se cierran de uno en uno.",
+      sinDestino: () => "No hay ningún destino disponible para este ticket.",
+    },
     pts: "pts",
     informe: {
       titulo: "Informe del sprint 42",
@@ -342,6 +355,15 @@ const TEXTOS = {
       ["Renew licences", "New user onboarding", "Migrate shared folder", "Check backups", "Update VPN client", "Set up 2nd floor printer", "Reset permissions"],
     ],
     victoria: "Sprint closed: all tickets completed.",
+    errores: {
+      grupo: () => "Invalid dependency: the ticket must belong to the other department group (FIN/LEG ↔ OPS/IT).",
+      puntos: n => `Invalid dependency: only a ${n}-point ticket fits here.`,
+      vacia: () => "Only a 13-point ticket can open an empty column.",
+      depto: d => `This column only accepts ${d} tickets.`,
+      orden: n => `The next ticket that can be closed here is the ${n}-point one.`,
+      varios: () => "Tickets are closed one at a time.",
+      sinDestino: () => "There is no available destination for this ticket.",
+    },
     pts: "pts",
     informe: {
       titulo: "Sprint 42 report",
@@ -440,6 +462,24 @@ function mover(j, o, d) {
   (d.t === "f" ? j.found[d.i] : j.tab[d.i]).push(...cartas);
   j.movs++;
   return true;
+}
+
+// Explica por qué no se puede mover (devuelve [código, dato] o null si es válido)
+function motivoRechazo(j, o, d) {
+  const cartas = cartasDe(j, o);
+  if (!cartas.length) return null;
+  if (d.t === "f") {
+    if (cartas.length > 1) return ["varios"];
+    if (cartas[0].s !== d.i) return ["depto", d.i];
+    if (j.found[d.i].length !== cartas[0].r - 1) return ["orden", j.found[d.i].length + 1];
+    return null;
+  }
+  const dest = j.tab[d.i];
+  if (!dest.length) return cartas[0].r === 13 ? null : ["vacia"];
+  const tope = cima(dest);
+  if (grupo(tope) === grupo(cartas[0])) return ["grupo"];
+  if (tope.r !== cartas[0].r + 1) return ["puntos", tope.r - 1];
+  return null;
 }
 
 // Robar del backlog (o reciclar la revisión si el backlog está vacío)
@@ -560,9 +600,15 @@ function pintarEstado() {
 }
 
 let temporizadorToast = 0, toastClave = null;
-function toast(clave) {
-  toastClave = clave;
-  $("toast").textContent = T[clave]; $("toast").hidden = false;
+// clave = texto fijo de TEXTOS; error = [código, dato] de T.errores
+function toast(clave, error) {
+  toastClave = clave || null;
+  $("toast").className = "toast" + (error ? " err" : "");
+  if (error) {
+    const [cod, dato] = error;
+    $("toast").textContent = T.errores[cod](cod === "depto" ? T.nombresDepto[dato] : dato);
+  } else $("toast").textContent = T[clave];
+  $("toast").hidden = false;
   clearTimeout(temporizadorToast);
   temporizadorToast = setTimeout(() => { $("toast").hidden = true; }, DURACION_TOAST);
 }
@@ -676,7 +722,13 @@ document.addEventListener("pointerup", e => {
     arr.fantasma.remove();
     destinoMarcado?.classList.remove("over"); destinoMarcado = null;
     arr = null;
-    if (!(d && accion(j => mover(j, o, parsearDestino(d.dataset.drop))))) render();   // si no vale, vuelve a su sitio
+    if (!d) { render(); return; }                            // soltado fuera: vuelve a su sitio sin aviso
+    const destino = parsearDestino(d.dataset.drop);
+    const mismoSitio = (o.t === destino.t && o.i === destino.i);
+    if (accion(j => mover(j, o, destino))) return;
+    render();                                                // no vale: vuelve a su sitio
+    const motivo = mismoSitio ? null : motivoRechazo(juego, o, destino);
+    if (motivo) avisarRechazo(d.dataset.drop, motivo);
   } else {
     arr = null;
     moverAuto(o);                                          // clic simple = movimiento automático
@@ -688,8 +740,17 @@ document.addEventListener("pointercancel", () => {
 });
 
 function moverAuto(o) {
+  if (ocupado || terminado) return;
   const d = destinoAuto(juego, o);
   if (d) accion(j => mover(j, o, d));
+  else toast(null, ["sinDestino"]);
+}
+
+// Marca en rojo el destino rechazado un instante y explica el motivo
+function avisarRechazo(drop, motivo) {
+  const el = $("board").querySelector(`[data-drop="${drop}"]`);
+  if (el) { el.classList.add("bad"); setTimeout(() => el.classList.remove("bad"), 700); }
+  toast(null, motivo);
 }
 
 // Backlog (delegado porque el botón se regenera en cada render)
