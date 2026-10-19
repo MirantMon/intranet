@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<title>Planificación de turnos</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Asignación de turnos por empleado y semana sin solapamientos.">
+<meta property="og:title" content="Planificación de turnos">
+<meta property="og:description" content="Asignación de turnos por empleado y semana sin solapamientos.">
+<meta property="og:url" content="https://corporativo.recursosvidafacil.com/apps/turnos.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='1' width='14' height='14' rx='2' fill='%23466b8c'/%3E%3Cpath d='M3.5 6h9M6 3v2M10 3v2' stroke='%23fff' stroke-width='1.2' stroke-linecap='round'/%3E%3Cg fill='%23fff'%3E%3Crect x='4' y='8' width='2' height='1.6'/%3E%3Crect x='7' y='8' width='2' height='1.6'/%3E%3Crect x='10' y='8' width='2' height='1.6'/%3E%3Crect x='4' y='10.6' width='2' height='1.6'/%3E%3Crect x='7' y='10.6' width='2' height='1.6'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+  /* ===== Tokens: misma paleta sobria de la suite ===== */
+  :root {
+    --chrome: #f3f4f6;
+    --chrome-2: #e8eaee;
+    --line: #d5d8de;
+    --line-2: #8f98a5;          /* separación entre equipos y semanas */
+    --bg: #eef0f3;
+    --surface: #ffffff;
+    --ink: #1f2328;
+    --ink-2: #5a6270;
+    --ink-3: #8a919c;
+    --accent: #466b8c;
+    --accent-soft: #e3ebf2;
+    --ok: #2d6140;   --ok-bg: #e2efe6;
+    --bad: #a3372a;  --bad-bg: #f7e3df;
+    --font: Calibri, "Segoe UI", Arial, sans-serif;
+    --c: 46px;                  /* tamaño de celda */
+    --nombre: 120px;            /* ancho de la columna de empleados */
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 13px/1.35 var(--font); overflow: hidden; }
+  .app { display: flex; flex-direction: column; height: 100%; min-width: 0; }
+
+  /* ===== Barra de título ===== */
+  .titlebar { display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: var(--accent); color: #fff; white-space: nowrap; overflow: hidden; }
+  .launcher { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 3px; color: #fff; flex: none; }
+  .launcher:hover { background: rgba(255,255,255,.15); }
+  .launcher:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+  .launcher svg { width: 14px; height: 14px; fill: currentColor; }
+  .titlebar .tt { font-weight: 600; }
+  .titlebar .sub { opacity: .8; font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+  .titlebar .spacer { flex: 1; }
+  .titlebar .user { width: 22px; height: 22px; border-radius: 50%; background: #dfe7ee; color: var(--accent); display: grid; place-items: center; font-size: 10px; font-weight: 700; flex: none; }
+
+  /* ===== Barra de herramientas ===== */
+  .toolbar { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--chrome); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; white-space: nowrap; }
+  .toolbar::-webkit-scrollbar { display: none; }
+  .btn {
+    flex: none; height: 30px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line); border-radius: 3px; background: #fff; color: var(--ink); font: inherit; cursor: pointer;
+  }
+  .btn:hover:not(:disabled) { background: var(--accent-soft); }
+  .btn:disabled { color: var(--ink-3); background: #f7f8fa; cursor: default; }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: #3d5f7e; }
+  .btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .sep { flex: none; width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
+  .combo { flex: none; height: 28px; padding: 0 8px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); background: #fff; border-radius: 3px; color: var(--ink-2); }
+  .combo::after { content: "▾"; font-size: 10px; color: var(--ink-3); margin-left: 4px; }
+  .combo b { color: var(--ink); font-weight: 600; }
+
+  /* ===== Pestañas de vista ===== */
+  .views { display: flex; gap: 2px; padding: 0 12px; background: #fff; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+  .views::-webkit-scrollbar { display: none; }
+  .view-tab { flex: none; padding: 8px 12px; border: 0; background: transparent; color: var(--ink-2); font: inherit; cursor: pointer; }
+  .view-tab[aria-selected="true"] { color: var(--accent); font-weight: 700; box-shadow: inset 0 -2px 0 var(--accent); }
+  .view-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  /* ===== Contenido ===== */
+  .main { flex: 1; min-height: 0; overflow: auto; }
+  .page { padding: 16px 16px 32px; max-width: 1180px; }
+  .page h2 { margin: 0; font-size: 18px; }
+  .muted { color: var(--ink-3); font-size: 12px; margin: 2px 0 0; }
+  .head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .plantilla { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .plantilla .lbl { font-size: 12px; color: var(--ink-2); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: #fff; }
+  .seg button { border: 0; background: transparent; font: inherit; padding: 5px 11px; cursor: pointer; color: var(--ink-2); }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 700; }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .estado { display: inline-block; padding: 2px 10px; border-radius: 4px; border: 1.5px solid currentColor; font-weight: 700; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+  .estado.ok { color: var(--ok); background: var(--ok-bg); }
+  .estado.bad { color: var(--bad); background: var(--bad-bg); }
+  .estado.run { color: var(--accent); background: var(--accent-soft); }
+
+  .layout { display: grid; grid-template-columns: auto minmax(220px, 300px); gap: 16px; align-items: start; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; min-width: 0; }
+  .panel h3 { margin: 0 0 8px; font-size: 13px; }
+
+  /* ===== Cuadrante (el tablero del sudoku) ===== */
+  .cuadrante { border-collapse: collapse; font-variant-numeric: tabular-nums; user-select: none; -webkit-user-select: none; }
+  .cuadrante th { font-weight: 700; color: var(--ink-3); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; padding: 2px 0; }
+  .cuadrante th.sem { color: var(--ink-2); font-size: 11px; border-bottom: 1px solid var(--line); }
+  .cuadrante th.emp { text-align: left; text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--ink-2); font-weight: 400; width: var(--nombre); padding-right: 8px; white-space: nowrap; }
+  .cuadrante th.emp b { display: block; font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; }
+  .cuadrante td {
+    width: var(--c); height: var(--c); padding: 0; border: 1px solid var(--line); text-align: center; vertical-align: middle;
+    font-size: 19px; cursor: pointer; background: #fff; position: relative;
+  }
+  /* Separación más marcada entre equipos (filas) y semanas (columnas) */
+  .cuadrante td.bl { border-left: 2px solid var(--line-2); }
+  .cuadrante td.br { border-right: 2px solid var(--line-2); }
+  .cuadrante td.bt { border-top: 2px solid var(--line-2); }
+  .cuadrante td.bb { border-bottom: 2px solid var(--line-2); }
+  .cuadrante td.fija { background: #e8ebef; color: var(--ink); font-weight: 700; cursor: default; }
+  .cuadrante td.propia { color: var(--accent); font-weight: 600; }
+  .cuadrante td.zona { background: #f1f6fb; }
+  .cuadrante td.fija.zona { background: #dde5ee; }
+  .cuadrante td.igual { background: #dfe9f2; }
+  .cuadrante td.sel { box-shadow: inset 0 0 0 2px var(--accent); background: #e9f0f7; }
+  .cuadrante td.conflicto { color: var(--bad); background: var(--bad-bg); }
+  .cuadrante td.sugerida { color: var(--ok); }
+  /* Notas de borrador: miniatura 3×3 con los candidatos */
+  .notas { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; height: 100%; padding: 2px; font-size: 9px; line-height: 1; color: var(--ink-3); font-weight: 400; }
+  .notas span { display: grid; place-items: center; }
+  .cuadrante:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+  /* Teclado de códigos (útil en móvil) */
+  .teclado { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 12px; max-width: 420px; }
+  .teclado button { height: 38px; border: 1px solid var(--line); background: #fff; border-radius: 4px; font: inherit; font-size: 16px; font-weight: 700; color: var(--ink); cursor: pointer; }
+  .teclado button:hover { background: var(--accent-soft); }
+  .teclado button.txt { font-size: 12px; font-weight: 400; }
+  .teclado button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .teclado button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .leyenda { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .leyenda li { display: flex; gap: 8px; align-items: baseline; font-size: 12px; }
+  .leyenda b { display: inline-block; width: 18px; text-align: center; color: var(--accent); }
+  .leyenda .n { margin-left: auto; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .kpi { margin-top: 10px; border-top: 1px solid #e6e8ec; padding-top: 10px; }
+  .kpi .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kpi .l { font-size: 12px; color: var(--ink-3); }
+
+  /* Tablas de cobertura y guía */
+  .tablewrap { overflow-x: auto; }
+  table.list { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .list th, .list td { padding: 6px 8px; border-bottom: 1px solid #e6e8ec; text-align: left; white-space: nowrap; }
+  .list th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); font-weight: 700; }
+  .list td.n, .list th.n { text-align: right; }
+  .list td.wrap { white-space: normal; min-width: 260px; }
+  .pill { display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 11px; line-height: 15px; }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); }
+  .pill.bad { background: var(--bad-bg); color: var(--bad); }
+  .rkpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
+  .rkpis div.k { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; }
+  .rkpis .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rkpis .l { font-size: 12px; color: var(--ink-3); }
+
+  /* ===== Barra de estado ===== */
+  .status { display: flex; align-items: center; gap: 18px; padding: 3px 12px; padding-bottom: calc(3px + env(safe-area-inset-bottom, 0px)); background: var(--chrome); border-top: 1px solid var(--line); color: var(--ink-2); font-size: 12px; white-space: nowrap; overflow: hidden; font-variant-numeric: tabular-nums; }
+  .status .spacer { flex: 1; }
+  #btnIdioma { border: 0; background: transparent; color: inherit; font: inherit; padding: 1px 4px; border-radius: 2px; cursor: pointer; }
+  #btnIdioma:hover { background: var(--chrome-2); }
+  #btnIdioma:focus-visible { outline: 2px solid var(--accent); }
+
+  .toast { position: fixed; right: 16px; bottom: 44px; max-width: calc(100% - 32px); z-index: 60; background: #fff; color: var(--ink); border: 1px solid var(--line); border-left: 3px solid var(--ok); box-shadow: 0 2px 8px rgba(20, 30, 45, .15); padding: 8px 12px; }
+  .toast.bad { border-left-color: var(--bad); }
+
+  @media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 560px) {
+    :root { --c: 33px; --nombre: 34px; }
+    .cuadrante td { font-size: 16px; }
+    .cuadrante th.emp .largo, .cuadrante th.emp b { display: none; }
+    .cuadrante th.sem { font-size: 10px; }
+    .notas { font-size: 7px; padding: 1px; }
+    .titlebar .sub, .combo, .toolbar .sep { display: none; }
+    .rkpis { grid-template-columns: minmax(0, 1fr); }
+    .status { gap: 10px; }
+    .status .opt { display: none; }
+    .panel { padding: 10px 8px; }
+  }
+  @media (min-width: 561px) { .cuadrante th.emp .corto { display: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="titlebar">
+    <a class="launcher" id="lnkPortal" href="../index.html"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="2" cy="2" r="1.4"/><circle cx="7" cy="2" r="1.4"/><circle cx="12" cy="2" r="1.4"/><circle cx="2" cy="7" r="1.4"/><circle cx="7" cy="7" r="1.4"/><circle cx="12" cy="7" r="1.4"/><circle cx="2" cy="12" r="1.4"/><circle cx="7" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/></svg></a>
+    <span class="tt" data-t="app"></span>
+    <span class="sub" data-t="sub"></span>
+    <span class="spacer"></span>
+    <span class="user" aria-hidden="true">LF</span>
+  </header>
+
+  <div class="toolbar">
+    <button class="btn primary" id="btnNuevo" type="button">
+      <svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg><span data-t="nuevo"></span>
+    </button>
+    <button class="btn" id="btnDeshacer" type="button">
+      <svg viewBox="0 0 16 16"><path d="M5 4L2 7l3 3"/><path d="M2 7h7a4 4 0 010 8H7"/></svg><span data-t="deshacer"></span>
+    </button>
+    <button class="btn" id="btnBorrador" type="button" aria-pressed="false">
+      <svg viewBox="0 0 16 16"><path d="M3 13l1-3 7-7 2 2-7 7z"/></svg><span data-t="borrador"></span>
+    </button>
+    <button class="btn" id="btnSugerir" type="button">
+      <svg viewBox="0 0 16 16"><path d="M8 2a4 4 0 00-2 7.5V11h4V9.5A4 4 0 008 2zM6.5 13.5h3"/></svg><span data-t="sugerir"></span>
+    </button>
+    <span class="sep"></span>
+    <span class="combo"><span data-t="centro"></span> <b data-t="planta"></b></span>
+  </div>
+
+  <nav class="views" role="tablist">
+    <button class="view-tab" type="button" role="tab" data-vista="cuadrante"></button>
+    <button class="view-tab" type="button" role="tab" data-vista="cobertura"></button>
+    <button class="view-tab" type="button" role="tab" data-vista="guia"></button>
+  </nav>
+
+  <main class="main" id="main">
+    <div class="page" id="vCuadrante"></div>
+    <div class="page" id="vCobertura" hidden></div>
+    <div class="page" id="vGuia" hidden></div>
+  </main>
+
+  <footer class="status">
+    <span class="opt" data-t="guardado"></span>
+    <span class="spacer"></span>
+    <span id="stAsig"></span>
+    <span class="opt" id="stConf"></span>
+    <span id="stTiempo"></span>
+    <button id="btnIdioma" type="button"></button>
+  </footer>
+  <div class="toast" id="toast" role="status" hidden></div>
+</div>
+
+<script>
+/* =====================================================================
+   CONSTANTES
+   ===================================================================== */
+// Plantillas = niveles: casillas fijas que se intentan dejar (menos = más difícil)
+const PLANTILLAS = { basica: 40, estandar: 32, compleja: 26 };
+const DURACION_TOAST = 4500;
+
+const EMPLEADOS = ["A. Soler", "L. Ferrer", "M. Ortega", "C. Navarro", "R. Vidal", "J. Pastor", "E. Molina", "P. Gil", "S. Romero"];
+const iniciales = n => n.replace(/[^A-ZÁÉÍÓÚÑ]/g, "");
+
+const TEXTOS = {
+  es: {
+    nombreIdioma: "Español (España)", tipIdioma: "Idioma", portal: "Aplicaciones",
+    app: "Planificación de turnos", sub: "· Recursos humanos · Semanas 41–43",
+    nuevo: "Nuevo cuadrante", deshacer: "Deshacer", borrador: "Borrador", sugerir: "Sugerir asignación",
+    centro: "Centro:", planta: "Planta Norte",
+    vistas: { cuadrante: "Cuadrante", cobertura: "Cobertura", guia: "Guía" },
+    guardado: "Guardado automáticamente",
+    asignadas: (a, b) => `Asignaciones: ${a}/${b}`,
+    conflictos: n => `Solapamientos: ${n}`,
+    tiempo: "Tiempo de planificación: ",
+    titulo: "Cuadrante de turnos · Semanas 41–43",
+    subtitulo: "Cada empleado, cada día y cada equipo por semana deben cubrir los 9 turnos sin repetir.",
+    plantilla: "Plantilla:", plantillas: { basica: "Básica", estandar: "Estándar", compleja: "Compleja" },
+    semana: n => `Semana ${n}`, dias: ["L", "X", "V"], equipo: l => `Equipo ${l}`,
+    borrar: "Borrar",
+    estados: { curso: "En edición", ok: "Validado", bad: "Con solapamientos" },
+    leyenda: "Códigos de turno",
+    turnos: ["Mañana · planta", "Tarde · planta", "Noche · planta", "Oficina técnica", "Almacén", "Calidad", "Mantenimiento", "Formación", "Guardia"],
+    kpiCompleto: "Cuadrante completado", kpiSug: "Sugerencias usadas",
+    victoria: "Planificación validada: sin solapamientos.",
+    generando: "Generando cuadrante…",
+    sinSel: "Selecciona una celda vacía para sugerir una asignación.",
+    cobertura: {
+      titulo: "Cobertura de turnos · Planta Norte", sub: "Resumen semanal · Semanas 41–43",
+      kpis: ["Horas planificadas", "Cobertura media", "Incidencias abiertas"],
+      cab: ["Semana", "Equipo", "Responsable", "Horas", "Cobertura", "Estado"],
+      estados: { ok: "Cubierto", bad: "Déficit" },
+    },
+    guia: {
+      titulo: "Guía de planificación", sub: "Procedimiento de RR. HH. · Rev. 2",
+      cab: ["Concepto", "Acción", "Descripción"],
+      filas: [
+        ["Objetivo", "—", "Completar el cuadrante con códigos de turno del 1 al 9 sin solapamientos."],
+        ["Regla 1 · Empleado", "—", "Cada empleado (fila) hace los 9 turnos una sola vez."],
+        ["Regla 2 · Día", "—", "Cada día (columna) cubre los 9 turnos una sola vez."],
+        ["Regla 3 · Equipo y semana", "—", "Cada bloque de 3 empleados × 3 días (un equipo en una semana) cubre los 9 turnos una sola vez."],
+        ["Asignar", "Clic + tecla 1–9 · Teclado inferior", "Escribe el código de turno en la celda seleccionada. Las celdas grises son asignaciones fijas."],
+        ["Borrar", "Supr · Retroceso · 0", "Vacía la celda seleccionada."],
+        ["Moverse", "Flechas", "Cambia la celda seleccionada."],
+        ["Borrador", "Botón · tecla B", "Anota candidatos pequeños en la celda sin asignarlos."],
+        ["Sugerir asignación", "Botón · tecla H", "Rellena la celda seleccionada con el código correcto."],
+        ["Solapamientos", "—", "Los códigos repetidos en una regla se marcan en rojo al momento."],
+        ["Vista de cobertura", "Esc", "Cambia a Cobertura y congela el tiempo. Esc de nuevo para volver."],
+        ["Idioma", "Barra de estado", "Pulse el indicador de idioma para alternar entre español e inglés."],
+      ],
+    },
+  },
+  en: {
+    nombreIdioma: "English (UK)", tipIdioma: "Language", portal: "Apps",
+    app: "Shift planning", sub: "· Human resources · Weeks 41–43",
+    nuevo: "New rota", deshacer: "Undo", borrador: "Draft notes", sugerir: "Suggest assignment",
+    centro: "Site:", planta: "North Plant",
+    vistas: { cuadrante: "Rota", cobertura: "Coverage", guia: "Guide" },
+    guardado: "Saved automatically",
+    asignadas: (a, b) => `Assignments: ${a}/${b}`,
+    conflictos: n => `Overlaps: ${n}`,
+    tiempo: "Planning time: ",
+    titulo: "Shift rota · Weeks 41–43",
+    subtitulo: "Every employee, every day and every team per week must cover all 9 shifts with no repeats.",
+    plantilla: "Template:", plantillas: { basica: "Basic", estandar: "Standard", compleja: "Complex" },
+    semana: n => `Week ${n}`, dias: ["Mon", "Wed", "Fri"], equipo: l => `Team ${l}`,
+    borrar: "Clear",
+    estados: { curso: "Editing", ok: "Validated", bad: "Overlaps found" },
+    leyenda: "Shift codes",
+    turnos: ["Morning · plant", "Afternoon · plant", "Night · plant", "Engineering office", "Warehouse", "Quality", "Maintenance", "Training", "On call"],
+    kpiCompleto: "Rota completed", kpiSug: "Suggestions used",
+    victoria: "Rota validated: no overlaps.",
+    generando: "Generating rota…",
+    sinSel: "Select an empty cell to suggest an assignment.",
+    cobertura: {
+      titulo: "Shift coverage · North Plant", sub: "Weekly summary · Weeks 41–43",
+      kpis: ["Planned hours", "Average coverage", "Open issues"],
+      cab: ["Week", "Team", "Lead", "Hours", "Coverage", "Status"],
+      estados: { ok: "Covered", bad: "Shortfall" },
+    },
+    guia: {
+      titulo: "Planning guide", sub: "HR procedure · Rev. 2",
+      cab: ["Item", "Action", "Description"],
+      filas: [
+        ["Goal", "—", "Complete the rota with shift codes 1 to 9 with no overlaps."],
+        ["Rule 1 · Employee", "—", "Each employee (row) works all 9 shifts exactly once."],
+        ["Rule 2 · Day", "—", "Each day (column) covers all 9 shifts exactly once."],
+        ["Rule 3 · Team & week", "—", "Each block of 3 employees × 3 days (one team in one week) covers all 9 shifts exactly once."],
+        ["Assign", "Click + key 1–9 · Keypad below", "Types the shift code into the selected cell. Grey cells are fixed assignments."],
+        ["Clear", "Delete · Backspace · 0", "Empties the selected cell."],
+        ["Move", "Arrow keys", "Changes the selected cell."],
+        ["Draft notes", "Button · B key", "Writes small candidate notes in the cell without assigning them."],
+        ["Suggest assignment", "Button · H key", "Fills the selected cell with the correct code."],
+        ["Overlaps", "—", "Codes repeated within a rule are highlighted in red straight away."],
+        ["Coverage view", "Esc", "Switches to Coverage and freezes the timer. Press Esc again to return."],
+        ["Language", "Status bar", "Click the language indicator to switch between Spanish and English."],
+      ],
+    },
+  },
+};
+
+/* =====================================================================
+   LÓGICA DEL SUDOKU (solo estado)
+   Rejilla = array de 81 números (0 = vacío). Índice = fila * 9 + columna
+   ===================================================================== */
+const fila = i => (i / 9) | 0, col = i => i % 9, caja = i => ((fila(i) / 3) | 0) * 3 + ((col(i) / 3) | 0);
+
+// Vecinas de cada celda (misma fila, columna o caja), precalculadas una vez
+const VECINAS = Array.from({ length: 81 }, (_, i) => {
+  const s = new Set();
+  for (let j = 0; j < 81; j++) if (j !== i && (fila(j) === fila(i) || col(j) === col(i) || caja(j) === caja(i))) s.add(j);
+  return [...s];
+});
+
+function candidatos(g, i) {
+  const usados = new Set(VECINAS[i].map(j => g[j]));
+  const res = [];
+  for (let v = 1; v <= 9; v++) if (!usados.has(v)) res.push(v);
+  return res;
+}
+
+function barajar(a) {
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+// Cuenta soluciones hasta "limite" (backtracking eligiendo la celda con menos candidatos)
+function contarSoluciones(g, limite) {
+  let mejor = -1, mejoresCand = null;
+  for (let i = 0; i < 81; i++) {
+    if (g[i]) continue;
+    const c = candidatos(g, i);
+    if (!c.length) return 0;
+    if (!mejoresCand || c.length < mejoresCand.length) { mejor = i; mejoresCand = c; if (c.length === 1) break; }
+  }
+  if (mejor < 0) return 1;                        // no quedan huecos: una solución
+  let total = 0;
+  for (const v of mejoresCand) {
+    g[mejor] = v;
+    total += contarSoluciones(g, limite - total);
+    if (total >= limite) break;
+  }
+  g[mejor] = 0;
+  return total;
+}
+
+// Rellena una rejilla completa al azar
+function completar(g) {
+  const i = g.indexOf(0);
+  if (i < 0) return true;
+  for (const v of barajar(candidatos(g, i))) {
+    g[i] = v;
+    if (completar(g)) return true;
+  }
+  g[i] = 0;
+  return false;
+}
+
+// Genera un sudoku con solución única quitando casillas mientras siga siendo único
+function generar(fijasObjetivo) {
+  const solucion = new Array(81).fill(0);
+  completar(solucion);
+  const puzzle = solucion.slice();
+  let fijas = 81;
+  for (const i of barajar([...Array(81).keys()])) {
+    if (fijas <= fijasObjetivo) break;
+    const guardado = puzzle[i];
+    puzzle[i] = 0;
+    if (contarSoluciones(puzzle.slice(), 2) !== 1) puzzle[i] = guardado;
+    else fijas--;
+  }
+  return { solucion, puzzle };
+}
+
+// Índices de celdas en conflicto (mismo código repetido en una regla)
+function conflictos(g) {
+  const res = new Set();
+  for (let i = 0; i < 81; i++) if (g[i]) for (const j of VECINAS[i]) if (g[j] === g[i]) { res.add(i); res.add(j); }
+  return res;
+}
+
+/* ===== Estado ===== */
+let juego;
+function nuevoCuadrante(plantilla) {
+  const { solucion, puzzle } = generar(PLANTILLAS[plantilla]);
+  juego = {
+    plantilla, solucion,
+    fijas: puzzle.map(v => v > 0),
+    valores: puzzle.slice(),
+    notas: Array.from({ length: 81 }, () => []),
+    sugeridas: [],
+    sel: puzzle.indexOf(0),
+    completado: false,
+  };
+  historial = [];
+  crono.ms = 0; crono.inicio = 0; crono.activo = false;
+}
+let historial = [];
+
+/* ===== Cronómetro por tramos ===== */
+const crono = { ms: 0, inicio: 0, activo: false };
+function arrancar() { if (crono.activo && !crono.inicio) crono.inicio = performance.now(); }
+function parar() { if (crono.inicio) { crono.ms += performance.now() - crono.inicio; crono.inicio = 0; } }
+function transcurrido() { return crono.ms + (crono.inicio ? performance.now() - crono.inicio : 0); }
+
+/* =====================================================================
+   ACCIONES
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+let idioma = "es", T = TEXTOS.es, vista = "cuadrante", modoBorrador = false;
+
+function cambio(fn) {
+  if (juego.completado) return;
+  const antes = JSON.stringify({ valores: juego.valores, notas: juego.notas, sugeridas: juego.sugeridas });
+  if (fn() === false) return;
+  historial.push(antes);
+  if (!crono.activo) { crono.activo = true; arrancar(); }
+  comprobarFin();
+  render();
+}
+
+function escribir(v) {
+  const i = juego.sel;
+  if (i < 0 || juego.fijas[i]) return;
+  cambio(() => {
+    if (modoBorrador && v) {
+      if (juego.valores[i]) return false;
+      const n = juego.notas[i];
+      juego.notas[i] = n.includes(v) ? n.filter(x => x !== v) : [...n, v].sort();
+      return;
+    }
+    if (juego.valores[i] === v && !juego.notas[i].length) return false;
+    juego.valores[i] = v;
+    juego.notas[i] = [];
+    juego.sugeridas = juego.sugeridas.filter(x => x !== i);
+    // Al asignar, se limpia ese código de las notas de las vecinas
+    if (v) for (const j of VECINAS[i]) juego.notas[j] = juego.notas[j].filter(x => x !== v);
+  });
+}
+
+function sugerir() {
+  const i = juego.sel;
+  if (i < 0 || juego.fijas[i] || juego.valores[i] === juego.solucion[i]) { toast(T.sinSel, "bad"); return; }
+  cambio(() => {
+    const v = juego.solucion[i];
+    juego.valores[i] = v; juego.notas[i] = [];
+    if (!juego.sugeridas.includes(i)) juego.sugeridas.push(i);
+    for (const j of VECINAS[i]) juego.notas[j] = juego.notas[j].filter(x => x !== v);
+  });
+}
+
+function deshacer() {
+  if (!historial.length) return;
+  const h = JSON.parse(historial.pop());
+  Object.assign(juego, h);
+  juego.completado = false;
+  if (crono.activo) arrancar();
+  render();
+}
+
+function comprobarFin() {
+  if (juego.valores.every(v => v) && conflictos(juego.valores).size === 0) {
+    juego.completado = true;
+    parar(); crono.activo = false;
+    toast(T.victoria);
+  }
+}
+
+function seleccionar(i) { juego.sel = i; render(); }
+
+/* =====================================================================
+   RENDERIZADO
+   ===================================================================== */
+function render() {
+  const j = juego, conf = conflictos(j.valores), sel = j.sel;
+  const vSel = sel >= 0 ? j.valores[sel] : 0;
+  const filas = [];
+  // Cabecera: semanas y días
+  filas.push(`<tr><th></th>${[41, 42, 43].map(s => `<th class="sem" colspan="3">${T.semana(s)}</th>`).join("")}</tr>`);
+  filas.push(`<tr><th></th>${[0, 1, 2].map(() => T.dias.map(d => `<th>${d}</th>`).join("")).join("")}</tr>`);
+  for (let r = 0; r < 9; r++) {
+    const eq = r % 3 === 0 ? `<b>${T.equipo("ABC"[r / 3])}</b>` : "";
+    let fila = `<tr><th class="emp">${eq}<span class="largo">${EMPLEADOS[r]}</span><span class="corto">${iniciales(EMPLEADOS[r])}</span></th>`;
+    for (let c = 0; c < 9; c++) {
+      const i = r * 9 + c, v = j.valores[i];
+      const cls = [];
+      if (c % 3 === 0) cls.push("bl"); if (c === 8) cls.push("br");
+      if (r % 3 === 0) cls.push("bt"); if (r === 8) cls.push("bb");
+      cls.push(j.fijas[i] ? "fija" : v ? "propia" : "vacia");
+      if (sel >= 0 && i !== sel && (fila_(i) === fila_(sel) || col(i) === col(sel) || caja(i) === caja(sel))) cls.push("zona");
+      if (vSel && v === vSel && i !== sel) cls.push("igual");
+      if (conf.has(i)) cls.push("conflicto");
+      if (j.sugeridas.includes(i)) cls.push("sugerida");
+      if (i === sel) cls.push("sel");
+      const contenido = v ? v : (j.notas[i].length ? `<span class="notas">${[1,2,3,4,5,6,7,8,9].map(n => `<span>${j.notas[i].includes(n) ? n : ""}</span>`).join("")}</span>` : "");
+      fila += `<td class="${cls.join(" ")}" data-i="${i}">${contenido}</td>`;
+    }
+    filas.push(fila + "</tr>");
+  }
+
+  const asignadas = j.valores.filter(v => v).length;
+  const estado = j.completado ? `<span class="estado ok">${T.estados.ok}</span>`
+    : conf.size ? `<span class="estado bad">${T.estados.bad}</span>` : `<span class="estado run">${T.estados.curso}</span>`;
+  // Cuántas veces está usado cada código (útil para saber qué falta)
+  const usos = [1,2,3,4,5,6,7,8,9].map(n => j.valores.filter(v => v === n).length);
+
+  $("vCuadrante").innerHTML = `
+    <div class="head"><div><h2>${T.titulo}</h2><p class="muted">${T.subtitulo}</p></div>
+      <div class="plantilla"><span class="lbl">${T.plantilla}</span><span class="seg" role="group" aria-label="${T.plantilla}">${Object.keys(PLANTILLAS).map(k =>
+        `<button type="button" data-plantilla="${k}" aria-pressed="${k === j.plantilla}">${T.plantillas[k]}</button>`).join("")}</span>${estado}</div></div>
+    <div class="layout">
+      <section class="panel"><div style="overflow-x:auto"><table class="cuadrante" id="cuadrante" tabindex="0" aria-label="${T.titulo}">${filas.join("")}</table></div>
+        <div class="teclado">${[1,2,3,4,5,6,7,8,9].map(n => `<button type="button" data-num="${n}">${n}</button>`).join("")}
+          <button type="button" class="txt" data-num="0">${T.borrar}</button></div></section>
+      <aside class="panel"><h3>${T.leyenda}</h3>
+        <ul class="leyenda">${T.turnos.map((t, k) => `<li><b>${k + 1}</b>${t}<span class="n">${usos[k]}/9</span></li>`).join("")}</ul>
+        <div class="kpi"><div class="v">${Math.round(asignadas / 81 * 100)} %</div><div class="l">${T.kpiCompleto}</div></div>
+        <div class="kpi"><div class="v">${j.sugeridas.length}</div><div class="l">${T.kpiSug}</div></div>
+      </aside>
+    </div>`;
+  $("btnDeshacer").disabled = !historial.length;
+  $("btnBorrador").setAttribute("aria-pressed", String(modoBorrador));
+  pintarEstado(asignadas, conf.size);
+}
+const fila_ = fila;   // alias: dentro de render, "fila" es una variable de texto
+
+function pintarEstado(asignadas, nConf) {
+  if (asignadas === undefined) { asignadas = juego.valores.filter(v => v).length; nConf = conflictos(juego.valores).size; }
+  $("stAsig").textContent = T.asignadas(asignadas, 81);
+  $("stConf").textContent = T.conflictos(nConf);
+  const s = Math.floor(transcurrido() / 1000);
+  $("stTiempo").textContent = T.tiempo + String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+}
+
+let temporizadorToast = 0;
+function toast(texto, tono) {
+  $("toast").textContent = texto;
+  $("toast").className = "toast" + (tono ? " " + tono : "");
+  $("toast").hidden = false;
+  clearTimeout(temporizadorToast);
+  temporizadorToast = setTimeout(() => { $("toast").hidden = true; }, DURACION_TOAST);
+}
+
+/* ===== Vistas seguras ===== */
+function construirCobertura() {
+  const C = T.cobertura;
+  const datos = [];   // [semana, equipo, responsable, horas, cobertura %]
+  const resp = ["A. Soler", "C. Navarro", "E. Molina"];
+  [41, 42, 43].forEach((s, a) => "ABC".split("").forEach((e, b) => datos.push([s, e, resp[b], 216 - ((a * 3 + b) * 7) % 20, 100 - ((a * 5 + b * 3) % 9)])));
+  const horas = datos.reduce((t, d) => t + d[3], 0), media = datos.reduce((t, d) => t + d[4], 0) / datos.length;
+  $("vCobertura").innerHTML = `<h2>${C.titulo}</h2><p class="muted">${C.sub}</p>
+    <div class="rkpis">
+      <div class="k"><div class="v">${new Intl.NumberFormat(idioma === "es" ? "es-ES" : "en-GB", { useGrouping: "always" }).format(horas)} h</div><div class="l">${C.kpis[0]}</div></div>
+      <div class="k"><div class="v">${media.toFixed(1).replace(".", idioma === "es" ? "," : ".")} %</div><div class="l">${C.kpis[1]}</div></div>
+      <div class="k"><div class="v">${datos.filter(d => d[4] < 95).length}</div><div class="l">${C.kpis[2]}</div></div>
+    </div>
+    <section class="panel"><div class="tablewrap"><table class="list">
+      <thead><tr>${C.cab.map((c, k) => `<th class="${k === 3 || k === 4 ? "n" : ""}">${c}</th>`).join("")}</tr></thead>
+      <tbody>${datos.map(([s, e, r, h, p]) => `<tr><td>${T.semana(s)}</td><td>${T.equipo(e)}</td><td>${r}</td><td class="n">${h} h</td><td class="n">${p} %</td>
+        <td><span class="pill ${p >= 95 ? "ok" : "bad"}">${C.estados[p >= 95 ? "ok" : "bad"]}</span></td></tr>`).join("")}</tbody>
+    </table></div></section>`;
+}
+
+function construirGuia() {
+  const G = T.guia;
+  $("vGuia").innerHTML = `<h2>${G.titulo}</h2><p class="muted">${G.sub}</p>
+    <section class="panel" style="margin-top:14px"><div class="tablewrap"><table class="list">
+      <thead><tr>${G.cab.map(c => `<th>${c}</th>`).join("")}</tr></thead>
+      <tbody>${G.filas.map(f => `<tr><td><b>${f[0]}</b></td><td>${f[1]}</td><td class="wrap">${f[2]}</td></tr>`).join("")}</tbody>
+    </table></div></section>`;
+}
+
+function mostrarVista(v) {
+  if (v === vista) return;
+  if (vista === "cuadrante") parar();
+  vista = v;
+  $("vCuadrante").hidden = v !== "cuadrante";
+  $("vCobertura").hidden = v !== "cobertura";
+  $("vGuia").hidden = v !== "guia";
+  $("toast").hidden = true;
+  $("main").scrollTo(0, 0);
+  if (v === "cuadrante" && crono.activo) arrancar();
+  document.querySelectorAll(".view-tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.vista === v)));
+  pintarEstado();
+}
+
+/* ===== Idioma ===== */
+function aplicarIdioma(nuevo) {
+  idioma = nuevo; T = TEXTOS[idioma];
+  document.documentElement.lang = idioma;
+  document.title = T.app;
+  document.querySelectorAll("[data-t]").forEach(n => { n.textContent = T[n.dataset.t]; });
+  document.querySelectorAll(".view-tab").forEach(b => { b.textContent = T.vistas[b.dataset.vista]; });
+  $("btnIdioma").textContent = T.nombreIdioma; $("btnIdioma").title = T.tipIdioma;
+  $("lnkPortal").href = "../index.html#" + idioma;
+  $("lnkPortal").title = T.portal; $("lnkPortal").setAttribute("aria-label", T.portal);
+  $("toast").hidden = true;
+  construirCobertura(); construirGuia(); render();
+}
+
+/* =====================================================================
+   ENTRADA
+   ===================================================================== */
+function empezar(plantilla) {
+  mostrarVista("cuadrante");
+  $("vCuadrante").innerHTML = `<p class="muted">${T.generando}</p>`;
+  // Se deja pintar el aviso antes de generar (la plantilla compleja puede tardar un instante)
+  setTimeout(() => { nuevoCuadrante(plantilla); $("toast").hidden = true; render(); }, 20);
+}
+
+$("vCuadrante").addEventListener("click", e => {
+  const td = e.target.closest("td[data-i]");
+  if (td) { seleccionar(+td.dataset.i); $("cuadrante")?.focus({ preventScroll: true }); return; }
+  const num = e.target.closest("button[data-num]");
+  if (num) { escribir(+num.dataset.num); return; }
+  const pl = e.target.closest("button[data-plantilla]");
+  if (pl && pl.dataset.plantilla !== juego.plantilla) empezar(pl.dataset.plantilla);
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") {                                  // botón de pánico: instantáneo
+    e.preventDefault();
+    mostrarVista(vista === "cuadrante" ? "cobertura" : "cuadrante");
+    return;
+  }
+  if (vista !== "cuadrante" || !juego) return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); deshacer(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.target.closest("button") && (e.key === "Enter" || e.key === " ")) return;   // deja funcionar los botones
+  const mov = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -9, ArrowDown: 9 }[e.key];
+  if (mov !== undefined) {
+    e.preventDefault();
+    let i = juego.sel < 0 ? 0 : juego.sel;
+    const r = fila(i), c = col(i);
+    if (mov === -1 && c > 0) i--; if (mov === 1 && c < 8) i++;
+    if (mov === -9 && r > 0) i -= 9; if (mov === 9 && r < 8) i += 9;
+    seleccionar(i);
+    return;
+  }
+  if (/^[1-9]$/.test(e.key)) { e.preventDefault(); escribir(+e.key); return; }
+  if (e.key === "0" || e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); escribir(0); return; }
+  const k = e.key.toLowerCase();
+  if (k === "b") { modoBorrador = !modoBorrador; render(); }
+  if (k === "h") sugerir();
+});
+
+$("btnNuevo").addEventListener("click", () => empezar(juego.plantilla));
+$("btnDeshacer").addEventListener("click", deshacer);
+$("btnBorrador").addEventListener("click", () => { modoBorrador = !modoBorrador; render(); });
+$("btnSugerir").addEventListener("click", sugerir);
+$("btnIdioma").addEventListener("click", () => aplicarIdioma(idioma === "es" ? "en" : "es"));
+document.querySelectorAll(".view-tab").forEach(b => b.addEventListener("click", () => mostrarVista(b.dataset.vista)));
+setInterval(() => { if (crono.inicio) pintarEstado(); }, 250);
+
+/* ===== Arranque ===== */
+nuevoCuadrante("basica");
+const pedido = location.hash.slice(1).toLowerCase();
+aplicarIdioma(TEXTOS[pedido] ? pedido : ((navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en"));
+document.querySelectorAll(".view-tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.vista === vista)));
+</script>
+</body>
+</html>
