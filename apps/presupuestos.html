@@ -216,6 +216,9 @@ const PAUSA_AUDITORIA_MS = 500;     // ritmo al revelar las partidas de auditor�
 const DURACION_TOAST = 4500;
 const FILAS_MINIMAS = 5;            // filas vacías para que parezca un formulario
 
+// Formato español con separador de miles también en números de 4 cifras (2.048 en vez de 2048)
+const fmtES = v => { try { return new Intl.NumberFormat("es-ES", { useGrouping: "always" }).format(v); } catch { return v.toLocaleString("es-ES"); } };
+
 const TEXTOS = {
   es: {
     nombreIdioma: "Español (España)", tipIdioma: "Idioma", portal: "Aplicaciones", locale: "es-ES",
@@ -226,7 +229,7 @@ const TEXTOS = {
     credito: v => `Crédito disponible: ${v}`,
     expedientes: n => `Expedientes: ${n}`,
     tiempo: "Tiempo de sesión: ",
-    k: v => `${v.toLocaleString("es-ES")} k€`,
+    k: v => `${fmtES(v)} k€`,
     exp: n => `Expediente EXP-2026-${String(n).padStart(4, "0")}`,
     expCorto: n => `EXP-2026-${String(n).padStart(4, "0")}`,
     expSub: "Solicitud de gasto frente a límite de 21 k€",
